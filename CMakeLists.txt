@@ -10,6 +10,19 @@ qt_standard_project_setup()
 
 qt_add_executable(bwd
     Source/Main.cpp
+    Source/MainWindow.cpp
+    Source/LoginWidget.cpp
+    Source/VaultUnlockWidget.cpp
+    Source/VaultWidget.cpp
+
+    Source/BWLineEdit.cpp
+)
+
+qt_add_resources(bwd
+    PREFIX "/"
+    BASE "Resources"
+    FILES
+        "Resources/Images/logo-dark@2x.png"
 )
 
 target_link_libraries(bwd PRIVATE Qt6::Widgets)
