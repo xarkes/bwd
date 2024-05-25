@@ -1,0 +1,7 @@
+# BWD
+
+Building:
+
+```
+cmake -Bbuild -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug
+```
