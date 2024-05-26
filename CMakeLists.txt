@@ -11,11 +11,14 @@ qt_standard_project_setup()
 qt_add_executable(bwd
     Source/Main.cpp
     Source/MainWindow.cpp
+
     Source/LoginWidget.cpp
     Source/VaultUnlockWidget.cpp
     Source/VaultWidget.cpp
 
     Source/BWLineEdit.cpp
+    Source/BWButton.cpp
+    Source/BWEntry.cpp
 )
 
 qt_add_resources(bwd

@@ -2,6 +2,8 @@
 #include <QLabel>
 
 #include "VaultWidget.h"
+#include "BWButton.h"
+#include "BWEntry.h"
 
 VaultWidget::VaultWidget()
 {
@@ -13,22 +15,35 @@ VaultWidget::VaultWidget()
 
   /* Left pane */
   auto lp = new QVBoxLayout();
-  lp->addWidget(new QLabel("All items"));
-  lp->addWidget(new QLabel("Favorites"));
-  lp->addWidget(new QLabel("Trash"));
-  auto leftPane = new QWidget(this);
+  lp->setAlignment(Qt::AlignmentFlag::AlignTop);
+  lp->setSpacing(0);
+  lp->setContentsMargins(0, 0, 0, 0);
+  lp->addWidget(new BWButton("All items"));
+  lp->addWidget(new BWButton("Favorites"));
+  lp->addWidget(new BWButton("Trash"));
+  auto leftPane = new QWidget();
   leftPane->setLayout(lp);
+  leftPane->setMinimumWidth(200);
+  leftPane->setMaximumWidth(300);
 
   /* Middle pane */
   auto mp = new QVBoxLayout();
+  mp->setAlignment(Qt::AlignmentFlag::AlignTop);
+  mp->setSpacing(0);
+  mp->setContentsMargins(0, 0, 0, 0);
   for (auto entry : pswEntries) {
-    mp->addWidget(new QLabel(entry));
+    auto w = new BWEntry(entry);
+    mp->addWidget(w);
   }
-  auto midPane = new QWidget(this);
+  auto midPane = new QWidget();
+  midPane->setStyleSheet("background-color: white;");
   midPane->setLayout(mp);
+  midPane->setMinimumWidth(200);
+  midPane->setMaximumWidth(300);
 
   /* Right pane */
   auto rightPane = new QWidget();
+  rightPane->setMinimumWidth(400);
 
   /* Main layout */
   auto layout = new QHBoxLayout();
@@ -38,6 +53,7 @@ VaultWidget::VaultWidget()
 
   auto mainLayout = new QVBoxLayout(this);
   mainLayout->setContentsMargins(0, 0, 0, 0);
+  mainLayout->setSpacing(0);
   mainLayout->addWidget(topbar);
   mainLayout->addLayout(layout);
 }
