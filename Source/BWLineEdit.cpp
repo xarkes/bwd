@@ -8,7 +8,8 @@
 
 BWLineEdit::BWLineEdit(QString title, QWidget* parent) : m_title(title), QLineEdit(parent)
 {
-  QLineEdit::setFixedHeight(size().height() + font().pointSize());
+  // QLineEdit::setFixedHeight(size().height() + font().pointSize());
+  setMinimumHeight(font().pointSize() * 2);
   setAlignment(Qt::AlignmentFlag::AlignBottom);
   setTextMargins(m_margin, m_margin, m_margin, m_margin);
   m_shadow = new QGraphicsDropShadowEffect(this);
