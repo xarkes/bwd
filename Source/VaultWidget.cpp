@@ -15,7 +15,10 @@ VaultWidget::VaultWidget()
   QWidget* topbar = new QWidget();
   topbar->setStyleSheet("background-color: blue;");
   auto topLayout = new QHBoxLayout();
-  auto searchBar = new BWLineEdit("Search vault");
+  auto searchBar = new QLineEdit();
+  searchBar->setPlaceholderText("Search vault");
+  searchBar->setStyleSheet("color: white; background-color: rgb(0, 0, 178)");
+  searchBar->setTextMargins(5, 5, 5, 5);
   searchBar->setMaximumWidth(width() / 2);
   topLayout->addWidget(searchBar);
   topbar->setLayout(topLayout);
