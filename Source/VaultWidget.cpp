@@ -140,6 +140,5 @@ void VaultWidget::updateRightPane(size_t idx)
 
 void VaultWidget::onEntryClicked(size_t idx)
 {
-  qDebug() << "Clicked";
   updateRightPane(idx);
 }
