@@ -57,7 +57,7 @@ VaultWidget::VaultWidget()
   mp->setContentsMargins(0, 0, 0, 0);
   auto idx = 0;
   for (auto entry : pswEntries) {
-    auto w = new QPushButton(entry.name);
+    auto w = new BWEntry(entry.name, QString("note%0").arg(idx));
     connect(w, &QPushButton::released, this, [this, idx]{ onEntryClicked(idx); });
     mp->addWidget(w);
     idx++;

@@ -16,7 +16,10 @@ namespace BWS {
   static QColor buttonOver = QColor(65, 159, 217);
 
   static QColor text = QColor(0, 0, 0);
+  static QColor textLow = QColor(90, 90, 90);
 
   static QColor item = QColor(200, 200, 200);
   static QColor itemOver = QColor(65, 159, 217);
+
+  static QColor main = QColor(0, 0, 255);
 }

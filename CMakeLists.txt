@@ -17,7 +17,6 @@ qt_add_executable(bwd
     Source/VaultWidget.cpp
 
     Source/BWLineEdit.cpp
-    Source/BWButton.cpp
     Source/BWEntry.cpp
 )
 
