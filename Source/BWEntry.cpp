@@ -8,6 +8,7 @@ BWEntry::BWEntry(QString label, QString note, QWidget* parent) : QPushButton(par
   setFont(QFont("Open Sans", 10, QFont::Weight::Normal));
   setContentsMargins(20, 10, 0, 0);
   setMinimumSize(QSize(label.length() * font().pointSize(), font().pointSize()*3 + contentsMargins().top() + contentsMargins().bottom()));
+  setCheckable(true);
 }
 
 void BWEntry::mouseMoveEvent(QMouseEvent *e) {
@@ -55,7 +56,7 @@ void BWEntry::paintEvent(QPaintEvent* event)
   p.drawText(contentsMargins().left(), font().pointSize()*2 + contentsMargins().top(), m_note);
 
   // Focus bar
-  if (hasFocus()) {
+  if (isChecked()) {
     p.fillRect(0, 0, focusBarWidth, event->rect().height(), m_colFocus);
   }
 }

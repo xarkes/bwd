@@ -1,14 +1,13 @@
 #include <QHBoxLayout>
 #include <QLabel>
-#include <qboxlayout.h>
-#include <QTreeWidget>
+#include <QListWidget>
+#include <QPushButton>
+#include <QButtonGroup>
 
 #include "VaultWidget.h"
 #include "BWEntry.h"
 #include "BWLineEdit.h"
-
-#include <QPushButton>
-
+#include "BWListWidget.h"
 
 VaultWidget::VaultWidget()
 {
@@ -25,26 +24,11 @@ VaultWidget::VaultWidget()
 
   /* Left pane */
   auto lp = new QVBoxLayout();
-  lp->setAlignment(Qt::AlignmentFlag::AlignTop);
-  lp->setSpacing(0);
-  lp->setContentsMargins(0, 0, 0, 0);
-  auto treeFav = new QTreeWidget();
-  treeFav->setColumnCount(1);
-  QList<QTreeWidgetItem*> favItems;
-  favItems.append(new QTreeWidgetItem(static_cast<QTreeWidget*>(nullptr), QStringList(QString("All items"))));
-  favItems.append(new QTreeWidgetItem(static_cast<QTreeWidget*>(nullptr), QStringList(QString("Favorites"))));
-  favItems.append(new QTreeWidgetItem(static_cast<QTreeWidget*>(nullptr), QStringList(QString("Trash"))));
-  treeFav->addTopLevelItems(favItems);
-
-  auto treeFolders = new QTreeWidget();
-  treeFolders->setColumnCount(1);
-  QList<QTreeWidgetItem*> folderItems;
-  folderItems.append(new QTreeWidgetItem(static_cast<QTreeWidget*>(nullptr), QStringList(QString("Cat0"))));
-  folderItems.append(new QTreeWidgetItem(static_cast<QTreeWidget*>(nullptr), QStringList(QString("Cat1"))));
-  treeFolders->addTopLevelItems(folderItems);
-
-  lp->addWidget(treeFav);
-  lp->addWidget(treeFolders);
+  auto lview = new BWListWidget("Category");
+  lview->addItem(new BWListItem("All items"));
+  lview->addItem(new BWListItem("Favorites"));
+  lview->addItem(new BWListItem("Whatever"));
+  lp->addWidget(lview);
   auto leftPane = new QWidget();
   leftPane->setLayout(lp);
   leftPane->setMinimumWidth(200);
@@ -56,10 +40,13 @@ VaultWidget::VaultWidget()
   mp->setSpacing(0);
   mp->setContentsMargins(0, 0, 0, 0);
   auto idx = 0;
+  auto mpgroup = new QButtonGroup(mp);
+  mpgroup->setExclusive(true);
   for (auto entry : pswEntries) {
     auto w = new BWEntry(entry.name, QString("note%0").arg(idx));
     connect(w, &QPushButton::released, this, [this, idx]{ onEntryClicked(idx); });
     mp->addWidget(w);
+    mpgroup->addButton(w);
     idx++;
   }
   auto midPane = new QWidget();
