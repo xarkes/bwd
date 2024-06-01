@@ -15,4 +15,9 @@ signals:
   void unlocked();
 
 private:
+  void setLoading(bool);
+
+  BWLineEdit* m_inputPassword;
+  QPushButton* m_buttonBack;
+  QPushButton* m_buttonUnlock;
 };

@@ -12,22 +12,22 @@
 
 VaultUnlockWidget::VaultUnlockWidget()
 {
-  auto inputPassword = new BWLineEdit("Password", this);
-  inputPassword->setEchoMode(QLineEdit::EchoMode::Password);
+  m_inputPassword = new BWLineEdit("Password", this);
+  m_inputPassword->setEchoMode(QLineEdit::EchoMode::Password);
   QLabel* label = new QLabel("Enter password", this);
 
-  auto buttonBack = new QPushButton("Back", this);
-  buttonBack->setStyleSheet("color: blue; background-color: white;");
-  auto buttonUnlock = new QPushButton("Unlock", this);
-  buttonUnlock->setStyleSheet("color: blue; background-color: white;");
+  m_buttonBack = new QPushButton("Back", this);
+  m_buttonBack->setStyleSheet("color: blue; background-color: white;");
+  m_buttonUnlock = new QPushButton("Unlock", this);
+  m_buttonUnlock->setStyleSheet("color: blue; background-color: white;");
 
   auto layout = new QVBoxLayout();
   layout->setContentsMargins(50, 50, 50, 200);
   layout->setSizeConstraint(QLayout::SizeConstraint::SetFixedSize);
   layout->addWidget(label, 0, Qt::AlignHCenter);
-  layout->addWidget(inputPassword);
-  layout->addWidget(buttonBack);
-  layout->addWidget(buttonUnlock);
+  layout->addWidget(m_inputPassword);
+  layout->addWidget(m_buttonBack);
+  layout->addWidget(m_buttonUnlock);
 
   QWidget* topbar = new QWidget();
   topbar->setStyleSheet("background-color: blue;");
@@ -38,13 +38,23 @@ VaultUnlockWidget::VaultUnlockWidget()
   mainLayout->addWidget(topbar);
   mainLayout->addLayout(layout);
 
-  connect(buttonUnlock, &QPushButton::released, [inputPassword](){
-    Net()->login(inputPassword->text());
+  connect(m_buttonUnlock, &QPushButton::released, [this](){
+    Net()->login(m_inputPassword->text());
+    setLoading(true);
   });
-  connect(buttonBack, &QPushButton::released, [this](){
+  connect(m_buttonBack, &QPushButton::released, [this](){
     emit back();
   });
-  connect(Net(), &BWNetworkService::loginDone, [this](){
-    emit unlocked();
+  connect(Net(), &BWNetworkService::loginDone, [this](bool success){
+    setLoading(false);
+    if (success) {
+      emit unlocked();
+    }
+    // TOOD: Print error message
   });
+}
+
+void VaultUnlockWidget::setLoading(bool loading)
+{
+  m_inputPassword->setDisabled(loading);
 }

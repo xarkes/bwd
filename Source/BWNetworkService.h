@@ -24,7 +24,7 @@ public:
 
 signals:
   void preLoginDone(bool success);
-  void loginDone();
+  void loginDone(bool success);
 
 protected:
   void run();
