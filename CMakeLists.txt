@@ -19,6 +19,8 @@ qt_add_executable(bwd
     Source/BWLineEdit.cpp
     Source/BWEntry.cpp
     Source/BWListWidget.cpp
+    Source/BWCategory.cpp
+    Source/BWCategoryEntry.cpp
 )
 
 qt_add_resources(bwd

@@ -7,7 +7,8 @@
 #include "VaultWidget.h"
 #include "BWEntry.h"
 #include "BWLineEdit.h"
-#include "BWListWidget.h"
+#include "BWCategory.h"
+#include "BWCategoryEntry.h"
 
 VaultWidget::VaultWidget()
 {
@@ -24,12 +25,15 @@ VaultWidget::VaultWidget()
 
   /* Left pane */
   auto lp = new QVBoxLayout();
-  auto lview = new BWListWidget("Category");
-  lview->addItem(new BWListItem("All items"));
-  lview->addItem(new BWListItem("Favorites"));
-  lview->addItem(new BWListItem("Whatever"));
-  lp->addWidget(lview);
+  auto lpgroup = new QButtonGroup(lp);
+  for (auto s : { "All items", "Favorites", "Whatever" }) {
+    auto w = new BWCategoryEntry(s);
+    lp->addWidget(w);
+    lpgroup->addButton(w);
+  }
+  lp->addWidget(new BWCategory("Test"));
   auto leftPane = new QWidget();
+  leftPane->setStyleSheet("background-color: rgb(32, 47, 63)");
   leftPane->setLayout(lp);
   leftPane->setMinimumWidth(200);
   leftPane->setMaximumWidth(300);
