@@ -10,5 +10,9 @@ class VaultUnlockWidget : public QWidget {
 public:
   VaultUnlockWidget();
 
+signals:
+  void back();
+  void unlocked();
+
 private:
 };

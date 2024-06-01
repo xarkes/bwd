@@ -6,11 +6,12 @@
 
 #include "LoginWidget.h"
 #include "BWLineEdit.h"
+#include "BWNetworkService.h"
 
 LoginWidget::LoginWidget()
 {
   m_inputEmail = new BWLineEdit("Email address", this);
-  auto *server = new BWLineEdit("Server", this);
+  m_inputServer = new BWLineEdit("Server", this);
   m_buttonLogin = new QPushButton("Continue", this);
   // QPalette palette = m_buttonLogin->palette();
   // palette.setColor(QPalette::ColorRole::ButtonText, QColorConstants::Blue);
@@ -29,7 +30,7 @@ LoginWidget::LoginWidget()
   layout->addWidget(logoLabel, 0, Qt::AlignHCenter);
   layout->addWidget(label, 0, Qt::AlignHCenter);
   layout->addWidget(m_inputEmail);
-  layout->addWidget(server);
+  layout->addWidget(m_inputServer);
   layout->addWidget(m_buttonLogin);
 
   QWidget* topbar = new QWidget();
@@ -40,4 +41,22 @@ LoginWidget::LoginWidget()
   mainLayout->setContentsMargins(0, 0, 0, 0);
   mainLayout->addWidget(topbar);
   mainLayout->addLayout(layout);
+
+  connect(m_buttonLogin, &QPushButton::released, [this](){
+    setLoadingScreen(true);
+    Net()->preLogin(m_inputEmail->text(), m_inputServer->text());
+  });
+  connect(Net(), &BWNetworkService::preLoginDone, [this](bool success){
+    setLoadingScreen(false);
+    if (success) {
+      emit loginOk();
+    }
+  });
+}
+
+void LoginWidget::setLoadingScreen(bool loading)
+{
+  m_buttonLogin->setDisabled(loading);
+  m_inputEmail->setDisabled(loading);
+  m_inputServer->setDisabled(loading);
 }

@@ -15,5 +15,5 @@ public:
 private:
   QString m_title;
   QGraphicsDropShadowEffect* m_shadow;
-  const int m_margin = 5;
+  const int m_margin = 7;
 };

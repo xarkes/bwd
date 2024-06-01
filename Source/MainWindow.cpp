@@ -1,14 +1,51 @@
 #include <QVBoxLayout>
 
 #include "MainWindow.h"
-#include "LoginWidget.h"
-#include "VaultUnlockWidget.h"
-#include "VaultWidget.h"
+#include <QStackedWidget>
+#include <QStackedLayout>
 
 MainWindow::MainWindow()
 {
-  // auto *widget = new LoginWidget();
-  // auto *widget = new VaultUnlockWidget();
-  auto *widget = new VaultWidget();
-  setCentralWidget(widget);
+  auto stack = new QStackedWidget();
+  setCentralWidget(stack);
+  showLogin();
+}
+
+void MainWindow::showLogin()
+{
+  if (!m_loginView) {
+    m_loginView = new LoginWidget();
+    connect(m_loginView, &LoginWidget::loginOk, [this](){
+      showUnlock();
+    });
+    centralWidget()->layout()->addWidget(m_loginView);
+  }
+  if (m_loginView->parent()) {
+    auto p = m_loginView->parentWidget();
+  }
+  static_cast<QStackedLayout*>(centralWidget()->layout())->setCurrentWidget(m_loginView);
+}
+
+void MainWindow::showUnlock()
+{
+  if (!m_unlockView) {
+    m_unlockView = new VaultUnlockWidget();
+    connect(m_unlockView, &VaultUnlockWidget::back, [this](){
+      showLogin();
+    });
+    connect(m_unlockView, &VaultUnlockWidget::unlocked, [this](){
+      showVault();
+    });
+    centralWidget()->layout()->addWidget(m_unlockView);
+  }
+  static_cast<QStackedLayout*>(centralWidget()->layout())->setCurrentWidget(m_unlockView);
+}
+
+void MainWindow::showVault()
+{
+  if (!m_vaultView) {
+    m_vaultView = new VaultWidget();
+    centralWidget()->layout()->addWidget(m_vaultView);
+  }
+  static_cast<QStackedLayout*>(centralWidget()->layout())->setCurrentWidget(m_vaultView);
 }
