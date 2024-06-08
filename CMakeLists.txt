@@ -22,6 +22,8 @@ qt_add_executable(bwd
     Source/BWCategory.cpp
     Source/BWCategoryEntry.cpp
     Source/BWNetworkService.cpp
+
+    Source/ThirdParty/aes.cc
 )
 
 qt_add_resources(bwd

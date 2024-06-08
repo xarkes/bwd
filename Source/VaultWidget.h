@@ -5,22 +5,21 @@
 class QPushButton;
 class BWLineEdit;
 
-struct PasswordEntry
-{
-  QString name;
-  QString notes;
-};
-static QList<PasswordEntry> pswEntries = {{"One", ""}, {"Two", "This one has a note"}, {"Three", ""}};
-
 class VaultWidget : public QWidget {
   Q_OBJECT;
 public:
   VaultWidget();
 
 private:
+  QWidget* m_leftPane = nullptr;
+  QWidget* m_midPane = nullptr;
   QWidget* m_rightPane = nullptr;
 
+  void updateLeftPane();
+  void updateMidPane();
   void updateRightPane(size_t idx=-1);
-
   void onEntryClicked(size_t idx=-1);
+
+private slots:
+  void onSynced();
 };

@@ -8,6 +8,46 @@ static BWNetworkService* __net_instance = nullptr;
 
 #define Net() BWNetworkService::instance()
 
+
+enum EncryptionType {
+  AesCbc256_B64 = 0,
+  AesCbc128_HmacSha256_B64 = 1,
+  AesCbc256_HmacSha256_B64 = 2,
+  Rsa2048_OaepSha256_B64 = 3,
+  Rsa2048_OaepSha1_B64 = 4,
+  Rsa2048_OaepSha256_HmacSha256_B64 = 5,
+  Rsa2048_OaepSha1_HmacSha256_B64 = 6,
+};
+
+class EncryptedString {
+public:
+  EncryptedString(QString str);
+  QByteArray decrypt();
+  QByteArray decryptToBytes(QByteArray key, QByteArray mac);
+
+public:
+  EncryptionType encType;
+
+private:
+  QByteArray iv;
+  QByteArray data;
+  QByteArray mac;
+  QByteArray decrypted;
+};
+
+struct BWDatabaseEntry {
+  EncryptedString name;
+  QString password;
+  EncryptedString notes;
+};
+
+struct BWDatabase {
+  BWDatabase() {};
+  BWDatabase(QJsonArray& ciphers);
+  QList<BWDatabaseEntry> entries;
+};
+
+
 class BWNetworkService : public QWidget {
   Q_OBJECT;
 
@@ -21,10 +61,17 @@ public:
 
   void preLogin(QString email, QString server);
   void login(QString password);
+  void sync();
+
+  BWDatabase& db() { return m_database; };
+
+  QByteArray m_key; // TODO
+  QByteArray m_privateKey;
 
 signals:
   void preLoginDone(bool success);
   void loginDone(bool success);
+  void synced();
 
 protected:
   void run();
@@ -34,5 +81,8 @@ private:
 
   QString m_email;
   QString m_server;
+  QByteArray m_masterKey;
+  QByteArray m_accessToken;
+  BWDatabase m_database;
 };
 

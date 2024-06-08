@@ -16,6 +16,9 @@ VaultUnlockWidget::VaultUnlockWidget()
   m_inputPassword->setEchoMode(QLineEdit::EchoMode::Password);
   QLabel* label = new QLabel("Enter password", this);
 
+  // XXX Remove me
+  m_inputPassword->setText("qweqweqwe123");
+
   m_buttonBack = new QPushButton("Back", this);
   m_buttonBack->setStyleSheet("color: blue; background-color: white;");
   m_buttonUnlock = new QPushButton("Unlock", this);
