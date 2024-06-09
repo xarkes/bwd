@@ -5,11 +5,11 @@
 #include <QButtonGroup>
 
 #include "VaultWidget.h"
-#include "BWEntry.h"
-#include "BWLineEdit.h"
-#include "BWCategory.h"
-#include "BWCategoryEntry.h"
 #include "BWNetworkService.h"
+#include "Components/BWEntry.h"
+#include "Components/BWLineEdit.h"
+#include "Components/BWCategory.h"
+#include "Components/BWCategoryEntry.h"
 
 VaultWidget::VaultWidget()
 {

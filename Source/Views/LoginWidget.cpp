@@ -5,8 +5,8 @@
 #include <QPalette>
 
 #include "LoginWidget.h"
-#include "BWLineEdit.h"
 #include "BWNetworkService.h"
+#include "Components/BWLineEdit.h"
 
 LoginWidget::LoginWidget()
 {

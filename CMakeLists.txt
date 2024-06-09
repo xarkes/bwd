@@ -11,17 +11,17 @@ qt_standard_project_setup()
 qt_add_executable(bwd
     Source/Main.cpp
     Source/MainWindow.cpp
-
-    Source/LoginWidget.cpp
-    Source/VaultUnlockWidget.cpp
-    Source/VaultWidget.cpp
-
-    Source/BWLineEdit.cpp
-    Source/BWEntry.cpp
-    Source/BWListWidget.cpp
-    Source/BWCategory.cpp
-    Source/BWCategoryEntry.cpp
     Source/BWNetworkService.cpp
+
+    Source/Views/LoginWidget.cpp
+    Source/Views/VaultUnlockWidget.cpp
+    Source/Views/VaultWidget.cpp
+
+    Source/Components/BWLineEdit.cpp
+    Source/Components/BWEntry.cpp
+    Source/Components/BWListWidget.cpp
+    Source/Components/BWCategory.cpp
+    Source/Components/BWCategoryEntry.cpp
 
     Source/ThirdParty/aes.cc
 )
@@ -34,6 +34,7 @@ qt_add_resources(bwd
 )
 
 target_link_libraries(bwd PRIVATE Qt6::Widgets Qt6::Network)
+target_include_directories(bwd PRIVATE Source)
 
 set_target_properties(bwd PROPERTIES
     WIN32_EXECUTABLE ON

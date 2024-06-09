@@ -2,9 +2,9 @@
 
 #include <QMainWindow>
 
-#include "LoginWidget.h"
-#include "VaultUnlockWidget.h"
-#include "VaultWidget.h"
+class LoginWidget;
+class VaultUnlockWidget;
+class VaultWidget;
 
 class MainWindow : public QMainWindow
 {

@@ -3,12 +3,10 @@
 #include <QVBoxLayout>
 #include <QPushButton>
 #include <QPalette>
-#include <qpushbutton.h>
-
-#include "BWNetworkService.h"
 
 #include "VaultUnlockWidget.h"
-#include "BWLineEdit.h"
+#include "BWNetworkService.h"
+#include <Components/BWLineEdit.h>
 
 VaultUnlockWidget::VaultUnlockWidget()
 {

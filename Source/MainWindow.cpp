@@ -1,8 +1,11 @@
 #include <QVBoxLayout>
-
-#include "MainWindow.h"
 #include <QStackedWidget>
 #include <QStackedLayout>
+
+#include "MainWindow.h"
+#include "Views/LoginWidget.h"
+#include "Views/VaultUnlockWidget.h"
+#include "Views/VaultWidget.h"
 
 MainWindow::MainWindow()
 {
