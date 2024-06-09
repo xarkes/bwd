@@ -89,23 +89,15 @@ void VaultWidget::updateMidPane()
   auto idx = 0;
   auto mpgroup = new QButtonGroup(mp);
   mpgroup->setExclusive(true);
-  // TODO: Decryption should be delegated to another thread, we don't want to block it
+  // TODO: Decryption should probably be delegated to another thread, we don't want to block it or slow it down
   for (auto entry : Net()->db().entries) {
-    // auto w = new BWEntry(entry.name, entry.notes.length() ? entry.notes : "");
-
-    QString name = entry.name.decryptToBytes(Net()->m_key, "");
-    // QString notes = entry.notes ?
-
-    auto w = new BWEntry(name, "TODO");
+    QString name = entry.name.decrypt();
+    QString subtext = entry.username.decrypt();
+    auto w = new BWEntry(name, subtext);
     connect(w, &QPushButton::released, this, [this, idx]{ onEntryClicked(idx); });
     mp->addWidget(w);
     mpgroup->addButton(w);
     idx++;
-
-    // XXX
-    if (idx > 5) {
-      break;
-    }
   }
 }
 
@@ -130,38 +122,53 @@ void VaultWidget::updateRightPane(size_t idx)
 
   auto r0l = new QHBoxLayout();
   r0l->setAlignment(Qt::AlignLeft);
+
   auto r0 = new QWidget();
   r0->setLayout(r0l);
   r0l->addWidget(new QLabel("Icon"));
-  r0l->addWidget(new QLabel(entry ? entry->name.decryptToBytes(Net()->m_key, "") : "Entry name"));
-  auto r1 = new QWidget();
-  auto r1l = new QVBoxLayout();
-  r1l->setSpacing(0);
-  r1->setLayout(r1l);
-  auto w = new BWLineEdit("username");
-  w->setDisabled(true);
-  r1l->addWidget(w);
-  w = new BWLineEdit("password");
-  w->setDisabled(true);
-  r1l->addWidget(w);
-  w = new BWLineEdit("otp");
-  w->setDisabled(true);
-  r1l->addWidget(w);
-  rl->setAlignment(Qt::AlignTop);
-
+  r0l->addWidget(new QLabel(entry ? entry->name.decrypt() : "Entry name"));
   rl->addWidget(r0);
-  rl->addWidget(r1);
-  // TODO
-  // if (entry && entry->notes.length()) {
-  //   auto r2 = new QWidget();
-  //   auto r2l = new QVBoxLayout();
-  //   r2->setLayout(r2l);
-  //   auto w = new BWLineEdit("notes");
-  //   w->setText(entry->notes);
-  //   w->setDisabled(true);
-  //   r2l->addWidget(w);
-  //   rl->addWidget(r2);
-  // }
+
+  if (entry && (entry->password.decrypt().length() || entry->username.decrypt().length())) {
+    auto r1 = new QWidget();
+    auto r1l = new QVBoxLayout();
+    r1l->setSpacing(0);
+    r1->setLayout(r1l);
+    auto user = new BWLineEdit("username");
+    user->setDisabled(true);
+    user->setText(entry ? entry->username.decrypt() : "");
+    r1l->addWidget(user);
+
+    auto password = new BWLineEdit("password");
+    password->setText(entry ? entry->password.decrypt() : "");
+    password->setDisabled(true);
+    r1l->addWidget(password);
+
+    rl->addWidget(r1);
+    rl->setAlignment(Qt::AlignTop);
+  }
+
+  if (entry && entry->notes.decrypt().length()) {
+    auto r2 = new QWidget();
+    auto r2l = new QVBoxLayout();
+    r2->setLayout(r2l);
+    auto w = new BWLineEdit("notes");
+    w->setText(entry->notes.decrypt());
+    w->setDisabled(true);
+    r2l->addWidget(w);
+    rl->addWidget(r2);
+  }
+
+  if (entry && entry->uri.decrypt().length()) {
+    auto row = new QWidget();
+    auto r2l = new QVBoxLayout();
+    row->setLayout(r2l);
+    auto w = new BWLineEdit("uri");
+    w->setText(entry->uri.decrypt());
+    w->setDisabled(true);
+    r2l->addWidget(w);
+    rl->addWidget(row);
+  }
 }
 
 void VaultWidget::onEntryClicked(size_t idx)

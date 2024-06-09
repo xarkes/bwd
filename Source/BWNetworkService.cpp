@@ -209,7 +209,6 @@ EncryptedString::EncryptedString(QString str)
 
   QList<QString> splits = str.split(".");
   QList<QString> pieces;
-  qDebug() << str;
 
   if (splits.length() == 2) {
     bool ok;
@@ -225,14 +224,14 @@ EncryptedString::EncryptedString(QString str)
 
   switch (this->encType) {
   case EncryptionType::AesCbc256_B64:
-    this->iv = QByteArray::fromBase64(pieces[0].toLatin1());
-    this->data = QByteArray::fromBase64(pieces[1].toLatin1());
+    this->m_iv = QByteArray::fromBase64(pieces[0].toLatin1());
+    this->m_data = QByteArray::fromBase64(pieces[1].toLatin1());
     break;
   case EncryptionType::AesCbc128_HmacSha256_B64:
   case EncryptionType::AesCbc256_HmacSha256_B64:
-    this->iv = QByteArray::fromBase64(pieces[0].toLatin1());
-    this->data = QByteArray::fromBase64(pieces[1].toLatin1());
-    this->mac = QByteArray::fromBase64(pieces[2].toLatin1());
+    this->m_iv = QByteArray::fromBase64(pieces[0].toLatin1());
+    this->m_data = QByteArray::fromBase64(pieces[1].toLatin1());
+    this->m_mac = QByteArray::fromBase64(pieces[2].toLatin1());
     break;
   default:
     qCritical() << "Unsupported cipher! " << this->encType;
@@ -240,49 +239,71 @@ EncryptedString::EncryptedString(QString str)
   }
 }
 
-QByteArray EncryptedString::decrypt()
+QString EncryptedString::decrypt()
 {
-  return "salut";
+  if (m_decrypted.length()) {
+    return m_decrypted;
+  }
+  if (!m_data.length()) {
+    // Nothing to decrypt
+    return "";
+  }
+  decryptToBytes(Net()->m_key);
+
+  // Cut off PKCS7 padding for strings
+  // XXX: Maybe wrong for non aes-cbc encryption
+  auto len = m_decrypted[m_decrypted.length() - 1];
+  if (len <= 16) {
+    m_decrypted.truncate(m_decrypted.length() - len);
+  }
+
+  return m_decrypted;
 }
 
 // TODO: Need to understand why the original client uses such structure
 // and the lifespan of decrypted information
 QByteArray EncryptedString::decryptToBytes(QByteArray key, QByteArray macKey)
 {
-  if (decrypted.length()) {
-    return decrypted;
+  if (m_decrypted.length()) {
+    return m_decrypted;
+  }
+  if (!m_data.length()) {
+    // Nothing to decrypt
+    return "";
   }
 
   switch (encType) {
   case EncryptionType::AesCbc256_HmacSha256_B64:
   {
-    // XXX: This is not Encrypted string
-    QByteArray macData = iv + data;
+    // XXX: Is this valid in every scenario for Bitwarden?
+    QByteArray macData = m_iv + m_data;
     QByteArray computedHash = QMessageAuthenticationCode::hash(macData, macKey, QCryptographicHash::Sha256);
-
     // XXX: Implement proper cryptographic verification
-    qDebug() << "hmac verif: " << (computedHash == mac);
+    if (computedHash != m_mac) {
+      qDebug() << "hmac verif failed" << computedHash << " " << m_mac;
+    }
 
     struct AES_ctx ctx;
-    AES_init_ctx_iv(&ctx, (uint8_t*) key.data(), (uint8_t*) this->iv.data());
-    AES_CBC_decrypt_buffer(&ctx, (uint8_t*) this->data.data(), this->data.length());
-    decrypted = this->data;
-    this->data = this->iv = this->mac = "";
+    AES_init_ctx_iv(&ctx, (uint8_t*) key.data(), (uint8_t*) m_iv.data());
+    AES_CBC_decrypt_buffer(&ctx, (uint8_t*) m_data.data(), m_data.length());
+    m_decrypted = m_data;
 
+    this->m_data = this->m_iv = this->m_mac = "";
     break;
   }
   default:
     qCritical() << "Unsupported cipher! " << encType;
   }
-  return decrypted;
+  return m_decrypted;
 }
 
 BWDatabase::BWDatabase(QJsonArray& ciphers)
 {
+  qDebug() << ciphers;
   for (QJsonValueRef cipher : ciphers) {
     QJsonObject obj = cipher.toObject();
     QJsonObject data = obj["Data"].toObject();
-    BWDatabaseEntry entry{EncryptedString(data["Name"].toString()), "psw", EncryptedString(data["Notes"].toString())};
+    BWDatabaseEntry entry{EncryptedString(data["Name"].toString()), EncryptedString(data["Username"].toString()), EncryptedString(data["Password"].toString()), EncryptedString(data["Notes"].toString()), EncryptedString(data["Uri"].toString())};
     entries.push_back(entry);
   }
 }

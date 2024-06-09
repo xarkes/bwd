@@ -22,23 +22,25 @@ enum EncryptionType {
 class EncryptedString {
 public:
   EncryptedString(QString str);
-  QByteArray decrypt();
-  QByteArray decryptToBytes(QByteArray key, QByteArray mac);
+  QString decrypt();
+  QByteArray decryptToBytes(QByteArray key, QByteArray mac="");
 
 public:
   EncryptionType encType;
 
 private:
-  QByteArray iv;
-  QByteArray data;
-  QByteArray mac;
-  QByteArray decrypted;
+  QByteArray m_iv;
+  QByteArray m_data;
+  QByteArray m_mac;
+  QByteArray m_decrypted;
 };
 
 struct BWDatabaseEntry {
   EncryptedString name;
-  QString password;
+  EncryptedString username;
+  EncryptedString password;
   EncryptedString notes;
+  EncryptedString uri;
 };
 
 struct BWDatabase {
