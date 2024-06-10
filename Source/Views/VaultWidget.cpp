@@ -8,6 +8,7 @@
 #include "BWNetworkService.h"
 #include "Components/BWEntry.h"
 #include "Components/BWLineEdit.h"
+#include "Components/BWField.h"
 #include "Components/BWCategory.h"
 #include "Components/BWCategoryEntry.h"
 
@@ -126,35 +127,45 @@ void VaultWidget::updateRightPane(size_t idx)
   auto r0 = new QWidget();
   r0->setLayout(r0l);
   r0l->addWidget(new QLabel("Icon"));
-  r0l->addWidget(new QLabel(entry ? entry->name.decrypt() : "Entry name"));
+  auto title = new QLabel(entry ? entry->name.decrypt() : "Entry name");
+  auto font = QFont(title->font());
+  font.setBold(true);
+  title->setFont(font);
+  r0l->addWidget(title);
   rl->addWidget(r0);
 
-  if (entry && (entry->password.decrypt().length() || entry->username.decrypt().length())) {
-    auto r1 = new QWidget();
-    auto r1l = new QVBoxLayout();
-    r1l->setSpacing(0);
-    r1->setLayout(r1l);
-    auto user = new BWLineEdit("username");
-    user->setDisabled(true);
+  auto r1 = new QWidget();
+  r1->setLayout(new QVBoxLayout());
+  if (entry && entry->username.decrypt().length()) {
+    r1->layout()->setSpacing(0);
+    auto user = new BWField("username");
     user->setText(entry ? entry->username.decrypt() : "");
-    r1l->addWidget(user);
-
-    auto password = new BWLineEdit("password");
-    password->setText(entry ? entry->password.decrypt() : "");
-    password->setDisabled(true);
-    r1l->addWidget(password);
-
-    rl->addWidget(r1);
-    rl->setAlignment(Qt::AlignTop);
+    r1->layout()->addWidget(user);
   }
+  if (entry && entry->password.decrypt().length()) {
+    auto password = new BWFieldConfidential("password");
+    password->setText(entry ? entry->password.decrypt() : "");
+    auto passwordRevealButton = new QPushButton("r");
+    passwordRevealButton->setMaximumWidth(20);
+    auto pswRow = new QWidget();
+    pswRow->setLayout(new QHBoxLayout());
+    pswRow->layout()->setContentsMargins(0, 0, 0, 0);
+    pswRow->layout()->addWidget(password);
+    pswRow->layout()->addWidget(passwordRevealButton);
+    connect(passwordRevealButton, &QPushButton::released, [password](){
+      password->toggle();
+    });
+    r1->layout()->addWidget(pswRow);
+  }
+  rl->addWidget(r1);
+  rl->setAlignment(Qt::AlignTop);
 
   if (entry && entry->notes.decrypt().length()) {
     auto r2 = new QWidget();
     auto r2l = new QVBoxLayout();
     r2->setLayout(r2l);
-    auto w = new BWLineEdit("notes");
+    auto w = new BWField("notes");
     w->setText(entry->notes.decrypt());
-    w->setDisabled(true);
     r2l->addWidget(w);
     rl->addWidget(r2);
   }
@@ -163,9 +174,8 @@ void VaultWidget::updateRightPane(size_t idx)
     auto row = new QWidget();
     auto r2l = new QVBoxLayout();
     row->setLayout(r2l);
-    auto w = new BWLineEdit("uri");
+    auto w = new BWField("uri");
     w->setText(entry->uri.decrypt());
-    w->setDisabled(true);
     r2l->addWidget(w);
     rl->addWidget(row);
   }

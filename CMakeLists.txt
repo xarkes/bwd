@@ -17,11 +17,12 @@ qt_add_executable(bwd
     Source/Views/VaultUnlockWidget.cpp
     Source/Views/VaultWidget.cpp
 
-    Source/Components/BWLineEdit.cpp
-    Source/Components/BWEntry.cpp
-    Source/Components/BWListWidget.cpp
     Source/Components/BWCategory.cpp
     Source/Components/BWCategoryEntry.cpp
+    Source/Components/BWEntry.cpp
+    Source/Components/BWField.cpp
+    Source/Components/BWLineEdit.cpp
+    Source/Components/BWListWidget.cpp
 
     Source/ThirdParty/aes.cc
 )
