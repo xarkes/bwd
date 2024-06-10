@@ -1,9 +1,11 @@
 #pragma once
 
+#include "BWNetworkService.h"
 #include <QWidget>
 
 class QPushButton;
-class BWLineEdit;
+class QLineEdit;
+class BWDatabaseEntry;
 
 class VaultWidget : public QWidget {
   Q_OBJECT;
@@ -14,6 +16,8 @@ private:
   QWidget* m_leftPane = nullptr;
   QWidget* m_midPane = nullptr;
   QWidget* m_rightPane = nullptr;
+  QLineEdit* m_searchBar = nullptr;
+  QString m_filter;
 
   void updateLeftPane();
   void updateMidPane();
@@ -22,4 +26,5 @@ private:
 
 private slots:
   void onSynced();
+  void filter(const QString& text);
 };

@@ -3,6 +3,7 @@
 #include <QListWidget>
 #include <QPushButton>
 #include <QButtonGroup>
+#include <QShortcut>
 
 #include "VaultWidget.h"
 #include "BWNetworkService.h"
@@ -15,15 +16,15 @@
 VaultWidget::VaultWidget()
 {
   QWidget* topbar = new QWidget();
+  topbar->setLayout(new QHBoxLayout());
   topbar->setStyleSheet("background-color: blue;");
-  auto topLayout = new QHBoxLayout();
-  auto searchBar = new QLineEdit();
-  searchBar->setPlaceholderText("Search vault");
-  searchBar->setStyleSheet("color: white; background-color: rgb(0, 0, 178)");
-  searchBar->setTextMargins(5, 5, 5, 5);
-  searchBar->setMaximumWidth(width() / 2);
-  topLayout->addWidget(searchBar);
-  topbar->setLayout(topLayout);
+
+  m_searchBar = new QLineEdit();
+  m_searchBar->setPlaceholderText("Search vault");
+  m_searchBar->setStyleSheet("color: white; background-color: rgb(0, 0, 178)");
+  m_searchBar->setTextMargins(5, 5, 5, 5);
+  m_searchBar->setMaximumWidth(width() / 2);
+  topbar->layout()->addWidget(m_searchBar);
 
   /* Show panes */
   onSynced();
@@ -40,7 +41,14 @@ VaultWidget::VaultWidget()
   mainLayout->addWidget(topbar);
   mainLayout->addLayout(layout);
 
+  /* Shortcuts */
+  new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_F), this, [this](){
+    m_searchBar->setFocus();
+  });
+
+  /* Handlers */
   connect(Net(), &BWNetworkService::synced, this, &VaultWidget::onSynced);
+  connect(m_searchBar, &QLineEdit::textChanged, this, &VaultWidget::filter);
 }
 
 void VaultWidget::updateLeftPane()
@@ -87,12 +95,16 @@ void VaultWidget::updateMidPane()
   mp->setAlignment(Qt::AlignmentFlag::AlignTop);
   mp->setSpacing(0);
   mp->setContentsMargins(0, 0, 0, 0);
+
   auto idx = 0;
   auto mpgroup = new QButtonGroup(mp);
   mpgroup->setExclusive(true);
-  // TODO: Decryption should probably be delegated to another thread, we don't want to block it or slow it down
-  for (auto entry : Net()->db().entries) {
+  for (auto& entry : Net()->db().entries) {
     QString name = entry.name.decrypt();
+    QString uri = entry.uri.decrypt();
+    if (m_filter.length() && !(name.toLower().contains(m_filter) || uri.toLower().contains(m_filter))) {
+      continue;
+    }
     QString subtext = entry.username.decrypt();
     auto w = new BWEntry(name, subtext);
     connect(w, &QPushButton::released, this, [this, idx]{ onEntryClicked(idx); });
@@ -191,4 +203,10 @@ void VaultWidget::onSynced()
   updateLeftPane();
   updateMidPane();
   updateRightPane();
+}
+
+void VaultWidget::filter(const QString& text)
+{
+  m_filter = text.toLower();
+  updateMidPane();
 }
