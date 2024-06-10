@@ -26,6 +26,9 @@ VaultWidget::VaultWidget()
   m_searchBar->setMaximumWidth(width() / 2);
   topbar->layout()->addWidget(m_searchBar);
 
+  m_iconHide = QIcon(":/Images/hide.png");
+  m_iconGlobe = QIcon(":/Images/globe.png");
+
   /* Show panes */
   onSynced();
 
@@ -107,6 +110,7 @@ void VaultWidget::updateMidPane()
     }
     QString subtext = entry.username.decrypt();
     auto w = new BWEntry(name, subtext);
+    w->setIcon(m_iconGlobe);
     connect(w, &QPushButton::released, this, [this, idx]{ onEntryClicked(idx); });
     mp->addWidget(w);
     mpgroup->addButton(w);
@@ -157,7 +161,8 @@ void VaultWidget::updateRightPane(size_t idx)
   if (entry && entry->password.decrypt().length()) {
     auto password = new BWFieldConfidential("password");
     password->setText(entry ? entry->password.decrypt() : "");
-    auto passwordRevealButton = new QPushButton("r");
+    auto passwordRevealButton = new QPushButton();
+    passwordRevealButton->setIcon(m_iconHide);
     passwordRevealButton->setMaximumWidth(20);
     auto pswRow = new QWidget();
     pswRow->setLayout(new QHBoxLayout());

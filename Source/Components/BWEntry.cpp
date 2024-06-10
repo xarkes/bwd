@@ -6,8 +6,8 @@
 BWEntry::BWEntry(QString label, QString note, QWidget* parent) : QPushButton(parent), m_label(label), m_note(note) {
   setMouseTracking(true);
   setFont(QFont("Open Sans", 10, QFont::Weight::Normal));
-  setContentsMargins(20, 10, 0, 0);
-  setMinimumSize(QSize(label.length() * font().pointSize(), font().pointSize()*3 + contentsMargins().top() + contentsMargins().bottom()));
+  setContentsMargins(10, 10, 0, 0);
+  setMinimumSize(QSize(label.length() * font().pointSize(), font().pointSize()*3.5 + contentsMargins().top() + contentsMargins().bottom()));
   setCheckable(true);
 }
 
@@ -50,10 +50,13 @@ void BWEntry::paintEvent(QPaintEvent* event)
 
   // Background
   p.fillRect(event->rect(), overPaint ? m_colBgOver : m_colBg);
+
+  icon().paint(&p, contentsMargins().left(), contentsMargins().top(), iconSize().rwidth(), iconSize().rheight());
+
   p.setPen(m_colText);
-  p.drawText(contentsMargins().left(), font().pointSize() + contentsMargins().top(), m_label);
+  p.drawText(contentsMargins().left() + iconSize().rwidth() + 10, font().pointSize() + contentsMargins().top(), m_label);
   p.setPen(m_colTextLow);
-  p.drawText(contentsMargins().left(), font().pointSize()*2 + contentsMargins().top(), m_note);
+  p.drawText(contentsMargins().left() + iconSize().rwidth() + 10, font().pointSize()*2.5 + contentsMargins().top(), m_note);
 
   // Focus bar
   if (isChecked()) {

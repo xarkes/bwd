@@ -32,6 +32,8 @@ qt_add_resources(bwd
     BASE "Resources"
     FILES
         "Resources/Images/logo-dark@2x.png"
+        "Resources/Images/hide.png"
+        "Resources/Images/globe.png"
 )
 
 target_link_libraries(bwd PRIVATE Qt6::Widgets Qt6::Network)

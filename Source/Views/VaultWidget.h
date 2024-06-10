@@ -19,6 +19,9 @@ private:
   QLineEdit* m_searchBar = nullptr;
   QString m_filter;
 
+  QIcon m_iconHide;
+  QIcon m_iconGlobe;
+
   void updateLeftPane();
   void updateMidPane();
   void updateRightPane(size_t idx=-1);
