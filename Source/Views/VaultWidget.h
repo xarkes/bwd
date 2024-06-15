@@ -22,6 +22,8 @@ private:
   QIcon m_iconHide;
   QIcon m_iconGlobe;
 
+  QList<BWDatabaseEntry*> m_shownEntries;
+
   void updateLeftPane();
   void updateMidPane();
   void updateRightPane(size_t idx=-1);

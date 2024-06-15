@@ -102,13 +102,10 @@ void VaultWidget::updateMidPane()
   auto idx = 0;
   auto mpgroup = new QButtonGroup(mp);
   mpgroup->setExclusive(true);
-  for (auto& entry : Net()->db().entries) {
-    QString name = entry.name.decrypt();
-    QString uri = entry.uri.decrypt();
-    if (m_filter.length() && !(name.toLower().contains(m_filter) || uri.toLower().contains(m_filter))) {
-      continue;
-    }
-    QString subtext = entry.username.decrypt();
+  for (auto entry : m_shownEntries) {
+    QString name = entry->name.decrypt();
+    QString uri = entry->uri.decrypt();
+    QString subtext = entry->username.decrypt();
     auto w = new BWEntry(name, subtext);
     w->setIcon(m_iconGlobe);
     connect(w, &QPushButton::released, this, [this, idx]{ onEntryClicked(idx); });
@@ -133,8 +130,8 @@ void VaultWidget::updateRightPane(size_t idx)
   }
 
   BWDatabaseEntry* entry = nullptr;
-  if (idx != -1 && idx < Net()->db().entries.length()) {
-    entry = &Net()->db().entries[idx];
+  if (idx != -1 && idx < m_shownEntries.length()) {
+    entry = m_shownEntries[idx];
   }
 
   auto r0l = new QHBoxLayout();
@@ -205,6 +202,10 @@ void VaultWidget::onEntryClicked(size_t idx)
 
 void VaultWidget::onSynced()
 {
+  m_shownEntries.clear();
+  for (auto& entry : Net()->db().entries) {
+    m_shownEntries.append(&entry);
+  }
   updateLeftPane();
   updateMidPane();
   updateRightPane();
@@ -213,5 +214,14 @@ void VaultWidget::onSynced()
 void VaultWidget::filter(const QString& text)
 {
   m_filter = text.toLower();
+  m_shownEntries.clear();
+  for (auto& entry : Net()->db().entries) {
+    QString name = entry.name.decrypt();
+    QString uri = entry.uri.decrypt();
+    if (m_filter.length() && !(name.toLower().contains(m_filter) || uri.toLower().contains(m_filter))) {
+      continue;
+    }
+    m_shownEntries.append(&entry);
+  }
   updateMidPane();
 }
