@@ -3,6 +3,7 @@
 #include <QVBoxLayout>
 #include <QPushButton>
 #include <QPalette>
+#include <QSettings>
 
 #include "LoginWidget.h"
 #include "BWNetworkService.h"
@@ -10,12 +11,14 @@
 
 LoginWidget::LoginWidget()
 {
+
   m_inputEmail = new BWLineEdit("Email address", this);
   m_inputServer = new BWLineEdit("Server", this);
   m_buttonLogin = new QPushButton("Continue", this);
 
-  // XXX: Remove me
-  m_inputEmail->setText("test@test.com");
+  QSettings settings;
+  m_inputEmail->setText(settings.value("lastemail").toString());
+  m_inputServer->setText(settings.value("lastserver").toString());
 
   // QPalette palette = m_buttonLogin->palette();
   // palette.setColor(QPalette::ColorRole::ButtonText, QColorConstants::Blue);
@@ -48,6 +51,9 @@ LoginWidget::LoginWidget()
 
   connect(m_buttonLogin, &QPushButton::released, [this](){
     setLoadingScreen(true);
+    QSettings settings;
+    settings.setValue("lastemail", m_inputEmail->text());
+    settings.setValue("lastserver", m_inputServer->text());
     Net()->preLogin(m_inputEmail->text(), m_inputServer->text());
   });
   connect(Net(), &BWNetworkService::preLoginDone, [this](bool success){
