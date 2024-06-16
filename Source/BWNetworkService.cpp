@@ -152,11 +152,9 @@ void BWNetworkService::login(QString password)
             }
 
             // Apparently, master key needs to be stretched for Aesbc256_HmacSha256_B64
-            QByteArray stretchedKey;
-            stretchedKey.append(hkdfExpandSha256(m_masterKey, "enc", 32));
-            stretchedKey.append(hkdfExpandSha256(m_masterKey, "mac", 32));
-
-            m_key = encrypted_key.decryptToBytes(stretchedKey, stretchedKey.sliced(32));
+            QByteArray stretchedKey = hkdfExpandSha256(m_masterKey, "enc", 32);
+            QByteArray macKey = hkdfExpandSha256(m_masterKey, "mac", 32);
+            m_key = encrypted_key.decryptToBytes(stretchedKey, macKey);
 
             // XXX: ???
             // encrypted_key = EncryptedString(response["PrivateKey"].toString().toUtf8());
@@ -247,6 +245,7 @@ EncryptedString::EncryptedString(QString str)
     bool ok;
     m_type = (EncryptionType)splits[0].toInt(&ok);
     if (!ok) {
+      qCritical() << "Invalid encryption cipher received: " << str;
       return;
     }
     pieces = splits[1].split("|");
@@ -275,7 +274,6 @@ EncryptedString::EncryptedString(QString str)
 void EncryptedString::setClear(QString str)
 {
   m_decrypted = str.toUtf8();
-  auto key = Net()->m_key;
 
   if (m_type == EncryptionType::Unknown) {
     // This is the first time this string is being encrypted.
@@ -289,6 +287,9 @@ void EncryptedString::setClear(QString str)
   switch (m_type) {
   case EncryptionType::AesCbc256_HmacSha256_B64:
   {
+    auto key = Net()->m_key.sliced(0, 32);
+    auto macKey = Net()->m_key.sliced(32, 32);
+
     struct AES_ctx ctx;
     AES_init_ctx_iv(&ctx, (uint8_t*) key.data(), (uint8_t*) m_iv.data());
     m_data = m_decrypted;
@@ -299,6 +300,9 @@ void EncryptedString::setClear(QString str)
     }
     Q_ASSERT(m_data.length() % 16 == 0);
     AES_CBC_encrypt_buffer(&ctx, (uint8_t*) m_data.data(), m_data.length());
+
+    QByteArray macData = m_iv + m_data;
+    m_mac = QMessageAuthenticationCode::hash(macData, macKey, QCryptographicHash::Sha256);
     break;
   }
   default:
@@ -332,7 +336,11 @@ QString EncryptedString::decrypt()
     // Nothing to decrypt
     return "";
   }
-  decryptToBytes(Net()->m_key);
+
+  // XXX: Probably only for AesCbc256_HmacSha256
+  auto key = Net()->m_key.sliced(0, 32);
+  auto macKey = Net()->m_key.sliced(32, 32);
+  decryptToBytes(key, macKey);
 
   // Cut off PKCS7 padding for strings
   // XXX: Maybe wrong for non aes-cbc encryption
@@ -344,9 +352,22 @@ QString EncryptedString::decrypt()
   return m_decrypted;
 }
 
+
+static bool CompareHash(QByteArray a, QByteArray b)
+{
+  if (a.length() != b.length()) {
+    return false;
+  }
+  uint8_t r = 0;
+  for (size_t i = 0; i < a.length(); i++) {
+    r += a[i] ^ b[i];
+  }
+  return r == 0;
+}
+
 // TODO: Need to understand why the original client uses such structure
 // and the lifespan of decrypted information
-QByteArray EncryptedString::decryptToBytes(QByteArray key, QByteArray macKey)
+QByteArray EncryptedString::decryptToBytes(QByteArray key, QByteArray mac)
 {
   if (m_decrypted.length()) {
     return m_decrypted;
@@ -359,19 +380,22 @@ QByteArray EncryptedString::decryptToBytes(QByteArray key, QByteArray macKey)
   switch (m_type) {
   case EncryptionType::AesCbc256_HmacSha256_B64:
   {
-    // XXX: Is this valid in every scenario for Bitwarden?
-    QByteArray macData = m_iv + m_data;
-    QByteArray computedHash = QMessageAuthenticationCode::hash(macData, macKey, QCryptographicHash::Sha256);
-    // XXX: Implement proper cryptographic verification
-    if (computedHash != m_mac) {
-      qDebug() << "hmac verif failed" << computedHash << " " << m_mac;
+    if (m_mac.length()) {
+      QByteArray macData = m_iv + m_data;
+      QByteArray computedHash = QMessageAuthenticationCode::hash(macData, mac, QCryptographicHash::Sha256);
+      if (!CompareHash(computedHash, m_mac)) {
+        // XXX: Should we invalidate the data?
+        qDebug() << "hmac verif failed";
+        qDebug() << "   " << computedHash.toHex();
+        qDebug() << "   " << m_mac.toHex();
+        qDebug() << "   " << mac.toHex();
+      }
     }
 
     struct AES_ctx ctx;
     AES_init_ctx_iv(&ctx, (uint8_t*) key.data(), (uint8_t*) m_iv.data());
     AES_CBC_decrypt_buffer(&ctx, (uint8_t*) m_data.data(), m_data.length());
     m_decrypted = m_data;
-
     this->m_data = this->m_iv = this->m_mac = "";
     break;
   }
