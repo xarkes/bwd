@@ -135,10 +135,6 @@ void BWNetworkService::login(QString password)
           }
           emit Net()->loginDone(false);
         } else {
-
-          // qDebug() << "login ok";
-          // qDebug() << response;
-
           if (response["token_type"].toString() != "Bearer") {
             emit Net()->loginDone(false);
           } else {
@@ -151,12 +147,11 @@ void BWNetworkService::login(QString password)
               return;
             }
 
-            // Apparently, master key needs to be stretched for Aesbc256_HmacSha256_B64
             QByteArray stretchedKey = hkdfExpandSha256(m_masterKey, "enc", 32);
             QByteArray macKey = hkdfExpandSha256(m_masterKey, "mac", 32);
             m_key = encrypted_key.decryptToBytes(stretchedKey, macKey);
 
-            // XXX: ???
+            // TODO: Maybe required for other encryption schemes
             // encrypted_key = EncryptedString(response["PrivateKey"].toString().toUtf8());
             // m_privateKey = encrypted_key.decryptToBytes(stretchedKey, stretchedKey.sliced(32));
 
@@ -190,9 +185,6 @@ void BWNetworkService::sync()
     QByteArray contents = reply->readAll();
     QJsonParseError error;
     QJsonDocument response = QJsonDocument::fromJson(contents, &error);
-
-    // qDebug() << "Received reply";
-    // qDebug() << response;
 
     QJsonArray ciphers = response["Ciphers"].toArray();
     m_database = BWDatabase(ciphers);
@@ -381,6 +373,7 @@ QByteArray EncryptedString::decryptToBytes(QByteArray key, QByteArray mac)
   case EncryptionType::AesCbc256_HmacSha256_B64:
   {
     if (m_mac.length()) {
+      // XXX: Is it expected that some entries have no mac? If so why use a mac at all?
       QByteArray macData = m_iv + m_data;
       QByteArray computedHash = QMessageAuthenticationCode::hash(macData, mac, QCryptographicHash::Sha256);
       if (!CompareHash(computedHash, m_mac)) {
