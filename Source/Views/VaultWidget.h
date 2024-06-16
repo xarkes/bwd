@@ -24,9 +24,13 @@ private:
 
   QList<BWDatabaseEntry*> m_shownEntries;
 
+  bool m_editing = false;
+
   void updateLeftPane();
   void updateMidPane();
-  void updateRightPane(size_t idx=-1);
+  void updateRightPane(size_t idx=-1, bool edit=false);
+  void showRightPane(size_t idx=-1);
+  void showRightPaneEdit(size_t idx=-1);
   void onEntryClicked(size_t idx=-1);
 
 private slots:

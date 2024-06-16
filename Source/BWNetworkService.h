@@ -8,7 +8,6 @@ static BWNetworkService* __net_instance = nullptr;
 
 #define Net() BWNetworkService::instance()
 
-
 enum EncryptionType {
   AesCbc256_B64 = 0,
   AesCbc128_HmacSha256_B64 = 1,
@@ -17,6 +16,7 @@ enum EncryptionType {
   Rsa2048_OaepSha1_B64 = 4,
   Rsa2048_OaepSha256_HmacSha256_B64 = 5,
   Rsa2048_OaepSha1_HmacSha256_B64 = 6,
+  Unknown = 7
 };
 
 class EncryptedString {
@@ -24,9 +24,11 @@ public:
   EncryptedString(QString str);
   QString decrypt();
   QByteArray decryptToBytes(QByteArray key, QByteArray mac="");
+  void setClear(QString str);
+  QString toString();
 
 public:
-  EncryptionType encType;
+  EncryptionType m_type = Unknown;
 
 private:
   QByteArray m_iv;
@@ -36,11 +38,14 @@ private:
 };
 
 struct BWDatabaseEntry {
+  QString id;
+  int type;
   EncryptedString name;
   EncryptedString username;
   EncryptedString password;
   EncryptedString notes;
   EncryptedString uri;
+  QString folderId;
 };
 
 struct BWDatabase {
@@ -64,6 +69,7 @@ public:
   void preLogin(QString email, QString server);
   void login(QString password);
   void sync();
+  void editEntry(BWDatabaseEntry* entry);
 
   BWDatabase& db() { return m_database; };
 

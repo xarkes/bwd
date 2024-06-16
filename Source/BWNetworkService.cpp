@@ -11,6 +11,8 @@
 #include <QNetworkReply>
 #include <QPasswordDigestor>
 #include <QMessageAuthenticationCode>
+#include <QRandomGenerator>
+#include <qjsonvalue.h>
 
 #include "ThirdParty/aes.h"
 
@@ -144,7 +146,7 @@ void BWNetworkService::login(QString password)
 
             // Decrypt user key
             auto encrypted_key = EncryptedString(response["Key"].toString().toUtf8());
-            if (encrypted_key.encType != EncryptionType::AesCbc256_HmacSha256_B64) {
+            if (encrypted_key.m_type != EncryptionType::AesCbc256_HmacSha256_B64) {
               qCritical() << "Unsupported algorithm!";
               return;
             }
@@ -200,6 +202,37 @@ void BWNetworkService::sync()
   });
 }
 
+void BWNetworkService::editEntry(BWDatabaseEntry* entry)
+{
+  QNetworkAccessManager *mgr = new QNetworkAccessManager(this);
+  const QUrl url(m_server + QString("/api/ciphers/%1").arg(entry->id));
+  qDebug() << url;
+  QNetworkRequest request(url);
+  request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+  request.setRawHeader("bitwarden-client-name", BW_CL_NAME);
+  request.setRawHeader("Accept", "application/json");
+  request.setRawHeader("Authorization", "Bearer " + m_accessToken);
+  QJsonObject obj;
+  obj["type"] = entry->type;
+  obj["folderId"] = entry->folderId.length() ? QJsonValue(entry->folderId) : QJsonValue::Null;
+  obj["notes"] = entry->notes.toString();
+  obj["name"] = entry->name.toString();
+
+  if (entry->type == 1) {
+    QJsonObject login;
+    login["username"] = entry->username.toString();
+    login["password"] = entry->password.toString();
+    obj["login"] = login;
+  } else {
+    qCritical() << "Unsupported entry type! " << entry->type;
+  }
+  QJsonDocument doc(obj);
+  QNetworkReply* reply = mgr->put(request, doc.toJson());
+  QObject::connect(reply, &QNetworkReply::finished, [=](){
+    QJsonDocument resp = QJsonDocument::fromJson(reply->readAll());
+    qDebug() << "Edit entry: " << reply->error() << " " << resp;
+  });
+}
 
 EncryptedString::EncryptedString(QString str)
 {
@@ -212,30 +245,81 @@ EncryptedString::EncryptedString(QString str)
 
   if (splits.length() == 2) {
     bool ok;
-    this->encType = (EncryptionType)splits[0].toInt(&ok);
+    m_type = (EncryptionType)splits[0].toInt(&ok);
     if (!ok) {
       return;
     }
     pieces = splits[1].split("|");
   } else {
     pieces = str.split("|");
-    this->encType = pieces.length() == 3 ? EncryptionType::AesCbc128_HmacSha256_B64 : EncryptionType::AesCbc256_B64;
+    m_type = pieces.length() == 3 ? EncryptionType::AesCbc128_HmacSha256_B64 : EncryptionType::AesCbc256_B64;
   }
 
-  switch (this->encType) {
+  switch (this->m_type) {
   case EncryptionType::AesCbc256_B64:
-    this->m_iv = QByteArray::fromBase64(pieces[0].toLatin1());
-    this->m_data = QByteArray::fromBase64(pieces[1].toLatin1());
+    m_iv = QByteArray::fromBase64(pieces[0].toLatin1());
+    m_data = QByteArray::fromBase64(pieces[1].toLatin1());
     break;
   case EncryptionType::AesCbc128_HmacSha256_B64:
   case EncryptionType::AesCbc256_HmacSha256_B64:
-    this->m_iv = QByteArray::fromBase64(pieces[0].toLatin1());
-    this->m_data = QByteArray::fromBase64(pieces[1].toLatin1());
-    this->m_mac = QByteArray::fromBase64(pieces[2].toLatin1());
+    m_iv = QByteArray::fromBase64(pieces[0].toLatin1());
+    m_data = QByteArray::fromBase64(pieces[1].toLatin1());
+    m_mac = QByteArray::fromBase64(pieces[2].toLatin1());
     break;
   default:
-    qCritical() << "Unsupported cipher! " << this->encType;
+    qCritical() << "Unsupported cipher for EncryptedString initialization: " << m_type;
     return;
+  }
+}
+
+void EncryptedString::setClear(QString str)
+{
+  m_decrypted = str.toUtf8();
+  auto key = Net()->m_key;
+
+  if (m_type == EncryptionType::Unknown) {
+    // This is the first time this string is being encrypted.
+    // Arbitrarily choose the encryption type, and initialize an IV
+    m_type = EncryptionType::AesCbc256_HmacSha256_B64;
+    auto gen = QRandomGenerator();
+    m_iv.resize(16);
+    gen.generate(m_iv.begin(), m_iv.end());
+  }
+
+  switch (m_type) {
+  case EncryptionType::AesCbc256_HmacSha256_B64:
+  {
+    struct AES_ctx ctx;
+    AES_init_ctx_iv(&ctx, (uint8_t*) key.data(), (uint8_t*) m_iv.data());
+    m_data = m_decrypted;
+    // PKCS7 padding
+    int remain = 16 - m_data.length() % 16;
+    for (int i = 0; i < remain; i++) {
+      m_data.append(remain);
+    }
+    Q_ASSERT(m_data.length() % 16 == 0);
+    AES_CBC_encrypt_buffer(&ctx, (uint8_t*) m_data.data(), m_data.length());
+    break;
+  }
+  default:
+    qCritical() << "Unsupported cipher for encryption: " << m_type;
+    return;
+  }
+}
+
+QString EncryptedString::toString()
+{
+  if (!m_data.length()) {
+    // String is empty, return empty string
+    return "";
+  }
+
+  switch (m_type) {
+  case EncryptionType::AesCbc256_HmacSha256_B64:
+    return QString("%1.%2|%3|%4").arg(m_type).arg(m_iv.toBase64()).arg(m_data.toBase64()).arg(m_iv.toBase64());
+  default:
+    qCritical() << "Unsupported cipher for formatting: " << m_type;
+    return "";
   }
 }
 
@@ -272,7 +356,7 @@ QByteArray EncryptedString::decryptToBytes(QByteArray key, QByteArray macKey)
     return "";
   }
 
-  switch (encType) {
+  switch (m_type) {
   case EncryptionType::AesCbc256_HmacSha256_B64:
   {
     // XXX: Is this valid in every scenario for Bitwarden?
@@ -292,7 +376,7 @@ QByteArray EncryptedString::decryptToBytes(QByteArray key, QByteArray macKey)
     break;
   }
   default:
-    qCritical() << "Unsupported cipher! " << encType;
+    qCritical() << "Unsupported cipher! " << m_type;
   }
   return m_decrypted;
 }
@@ -303,7 +387,16 @@ BWDatabase::BWDatabase(QJsonArray& ciphers)
   for (QJsonValueRef cipher : ciphers) {
     QJsonObject obj = cipher.toObject();
     QJsonObject data = obj["Data"].toObject();
-    BWDatabaseEntry entry{EncryptedString(data["Name"].toString()), EncryptedString(data["Username"].toString()), EncryptedString(data["Password"].toString()), EncryptedString(data["Notes"].toString()), EncryptedString(data["Uri"].toString())};
+    BWDatabaseEntry entry{
+      obj["Id"].toString(),
+      obj["Type"].toInt(),
+      EncryptedString(data["Name"].toString()),
+      EncryptedString(data["Username"].toString()),
+      EncryptedString(data["Password"].toString()),
+      EncryptedString(data["Notes"].toString()),
+      EncryptedString(data["Uri"].toString()),
+      obj["FolderId"].toString()
+    };
     entries.push_back(entry);
   }
 }

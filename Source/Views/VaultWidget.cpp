@@ -115,49 +115,113 @@ void VaultWidget::updateMidPane()
   }
 }
 
-void VaultWidget::updateRightPane(size_t idx)
+void VaultWidget::updateRightPane(size_t idx, bool edit)
 {
   if (!m_rightPane) {
     m_rightPane = new QWidget();
     m_rightPane->setMinimumWidth(400);
     m_rightPane->setLayout(new QVBoxLayout());
   }
-  auto rl = m_rightPane->layout();
-  while (rl->count()) {
-    auto w = rl->takeAt(0);
+  auto rightLayout = m_rightPane->layout();
+  while (rightLayout->count()) {
+    auto w = rightLayout->takeAt(0);
     w->widget()->setParent(nullptr);
     // XXX: Does this leak memory?
   }
+
+  if (edit) {
+    showRightPaneEdit(idx);
+  } else {
+    showRightPane(idx);
+  }
+}
+
+void VaultWidget::showRightPaneEdit(size_t idx) {
+  auto title = new BWLineEdit("title");
+  auto username = new BWLineEdit("username");
+  auto password = new BWLineEdit("password");
+  auto uri = new BWLineEdit("uri");
 
   BWDatabaseEntry* entry = nullptr;
   if (idx != -1 && idx < m_shownEntries.length()) {
     entry = m_shownEntries[idx];
   }
 
-  auto r0l = new QHBoxLayout();
-  r0l->setAlignment(Qt::AlignLeft);
+  auto row0 = new QWidget();
+  row0->setLayout(new QHBoxLayout());
+  row0->layout()->setAlignment(Qt::AlignRight);
+  row0->layout()->setContentsMargins(0, 0, 0, 0);
+  auto editButton = new QPushButton("Save");
+  connect(editButton, &QPushButton::released, [this, idx, entry, title, username, password, uri](){
+    entry->name.setClear(title->text());
+    entry->username.setClear(username->text());
+    entry->password.setClear(password->text());
+    entry->uri.setClear(uri->text());
+    Net()->editEntry(entry);
+    updateRightPane(idx, false);
+  });
+  row0->layout()->addWidget(editButton);
 
-  auto r0 = new QWidget();
-  r0->setLayout(r0l);
-  r0l->addWidget(new QLabel("Icon"));
-  auto title = new QLabel(entry ? entry->name.decrypt() : "Entry name");
+  if (entry) {
+    title->setText(entry->name.decrypt());
+    username->setText(entry->username.decrypt());
+    password->setText(entry->password.decrypt());
+    uri->setText(entry->uri.decrypt());
+  }
+
+  m_rightPane->layout()->addWidget(row0);
+  m_rightPane->layout()->addWidget(title);
+  m_rightPane->layout()->addWidget(username);
+  m_rightPane->layout()->addWidget(password);
+  m_rightPane->layout()->addWidget(uri);
+}
+
+void VaultWidget::showRightPane(size_t idx) {
+  BWDatabaseEntry* entry = nullptr;
+  if (idx != -1 && idx < m_shownEntries.length()) {
+    entry = m_shownEntries[idx];
+  }
+  if (!entry) {
+    return;
+  }
+
+  auto row0 = new QWidget();
+  row0->setLayout(new QHBoxLayout());
+  row0->layout()->setAlignment(Qt::AlignRight);
+  row0->layout()->setContentsMargins(0, 0, 0, 0);
+  auto editButton = new QPushButton("Edit");
+  editButton->setText("Edit");
+  connect(editButton, &QPushButton::released, [this, idx](){
+    updateRightPane(idx, true);
+  });
+  row0->layout()->addWidget(editButton);
+  m_rightPane->layout()->addWidget(row0);
+
+  auto row1 = new QWidget();
+  row1->setLayout(new QHBoxLayout());
+  row1->layout()->setAlignment(Qt::AlignLeft);
+  auto icon = new QLabel();
+  icon->setPixmap(m_iconGlobe.pixmap(QSize{50, 50}));
+  row1->layout()->addWidget(icon);
+  auto title = new QLabel(entry->name.decrypt());
   auto font = QFont(title->font());
   font.setBold(true);
+  font.setPointSize(font.pointSize() + 10);
   title->setFont(font);
-  r0l->addWidget(title);
-  rl->addWidget(r0);
+  row1->layout()->addWidget(title);
+  m_rightPane->layout()->addWidget(row1);
 
-  auto r1 = new QWidget();
-  r1->setLayout(new QVBoxLayout());
-  if (entry && entry->username.decrypt().length()) {
-    r1->layout()->setSpacing(0);
+  auto row2 = new QWidget();
+  row2->setLayout(new QVBoxLayout());
+  if (entry->username.decrypt().length()) {
+    row2->layout()->setSpacing(0);
     auto user = new BWField("username");
     user->setText(entry ? entry->username.decrypt() : "");
-    r1->layout()->addWidget(user);
+    row2->layout()->addWidget(user);
   }
-  if (entry && entry->password.decrypt().length()) {
+  if (entry->password.decrypt().length()) {
     auto password = new BWFieldConfidential("password");
-    password->setText(entry ? entry->password.decrypt() : "");
+    password->setText(entry->password.decrypt());
     auto passwordRevealButton = new QPushButton();
     passwordRevealButton->setIcon(m_iconHide);
     passwordRevealButton->setMaximumWidth(20);
@@ -169,29 +233,27 @@ void VaultWidget::updateRightPane(size_t idx)
     connect(passwordRevealButton, &QPushButton::released, [password](){
       password->toggle();
     });
-    r1->layout()->addWidget(pswRow);
+    row2->layout()->addWidget(pswRow);
   }
-  rl->addWidget(r1);
-  rl->setAlignment(Qt::AlignTop);
+  m_rightPane->layout()->addWidget(row2);
+  m_rightPane->layout()->setAlignment(Qt::AlignTop);
 
-  if (entry && entry->notes.decrypt().length()) {
-    auto r2 = new QWidget();
-    auto r2l = new QVBoxLayout();
-    r2->setLayout(r2l);
+  if (entry->notes.decrypt().length()) {
+    auto row = new QWidget();
+    row->setLayout(new QVBoxLayout());
     auto w = new BWField("notes");
     w->setText(entry->notes.decrypt());
-    r2l->addWidget(w);
-    rl->addWidget(r2);
+    row->layout()->addWidget(w);
+    m_rightPane->layout()->addWidget(row);
   }
 
-  if (entry && entry->uri.decrypt().length()) {
+  if (entry->uri.decrypt().length()) {
     auto row = new QWidget();
-    auto r2l = new QVBoxLayout();
-    row->setLayout(r2l);
+    row->setLayout(new QVBoxLayout());
     auto w = new BWField("uri");
     w->setText(entry->uri.decrypt());
-    r2l->addWidget(w);
-    rl->addWidget(row);
+    row->layout()->addWidget(w);
+    m_rightPane->layout()->addWidget(row);
   }
 }
 
