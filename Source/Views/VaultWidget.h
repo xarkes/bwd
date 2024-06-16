@@ -21,6 +21,9 @@ private:
 
   QIcon m_iconHide;
   QIcon m_iconGlobe;
+  QIcon m_iconIdentity;
+  QIcon m_iconNote;
+  QIcon m_iconCreditCard;
 
   QList<BWDatabaseEntry*> m_shownEntries;
 
@@ -32,6 +35,8 @@ private:
   void showRightPane(size_t idx=-1);
   void showRightPaneEdit(size_t idx=-1);
   void onEntryClicked(size_t idx=-1);
+
+  QIcon& getIconForEntry(BWDatabaseEntry*);
 
 private slots:
   void onSynced();

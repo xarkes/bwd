@@ -28,6 +28,9 @@ VaultWidget::VaultWidget()
 
   m_iconHide = QIcon(":/Images/hide.png");
   m_iconGlobe = QIcon(":/Images/globe.png");
+  m_iconIdentity = QIcon(":/Images/identity.png");
+  m_iconNote = QIcon(":/Images/note.png");
+  m_iconCreditCard = QIcon(":/Images/credit-card.png");
 
   /* Show panes */
   onSynced();
@@ -107,7 +110,7 @@ void VaultWidget::updateMidPane()
     QString uri = entry->uri.decrypt();
     QString subtext = entry->username.decrypt();
     auto w = new BWEntry(name, subtext);
-    w->setIcon(m_iconGlobe);
+    w->setIcon(getIconForEntry(entry));
     connect(w, &QPushButton::released, this, [this, idx]{ onEntryClicked(idx); });
     mp->addWidget(w);
     mpgroup->addButton(w);
@@ -159,6 +162,7 @@ void VaultWidget::showRightPaneEdit(size_t idx) {
     entry->uri.setClear(uri->text());
     Net()->editEntry(entry);
     updateRightPane(idx, false);
+    updateMidPane();
   });
   row0->layout()->addWidget(editButton);
 
@@ -201,7 +205,7 @@ void VaultWidget::showRightPane(size_t idx) {
   row1->setLayout(new QHBoxLayout());
   row1->layout()->setAlignment(Qt::AlignLeft);
   auto icon = new QLabel();
-  icon->setPixmap(m_iconGlobe.pixmap(QSize{50, 50}));
+  icon->setPixmap(getIconForEntry(entry).pixmap(QSize{50, 50}));
   row1->layout()->addWidget(icon);
   auto title = new QLabel(entry->name.decrypt());
   auto font = QFont(title->font());
@@ -286,4 +290,19 @@ void VaultWidget::filter(const QString& text)
     m_shownEntries.append(&entry);
   }
   updateMidPane();
+}
+
+QIcon& VaultWidget::getIconForEntry(BWDatabaseEntry* entry)
+{
+  switch (entry->type) {
+  case 1:
+    return m_iconGlobe;
+  case 2:
+    return m_iconNote;
+  case 3:
+    return m_iconCreditCard;
+  case 4:
+    return m_iconIdentity;
+  }
+  return m_iconGlobe;
 }
