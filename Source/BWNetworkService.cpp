@@ -13,6 +13,7 @@
 #include <QMessageAuthenticationCode>
 #include <QRandomGenerator>
 #include <qjsonarray.h>
+#include <qjsondocument.h>
 #include <qjsonvalue.h>
 
 #include "ThirdParty/aes.h"
@@ -54,7 +55,6 @@ static QByteArray hkdfExpandSha256(QByteArray prk, QByteArray info, size_t outpu
 
 void BWNetworkService::login(QString password)
 {
-  qDebug() << "login";
   QNetworkAccessManager *mgr = new QNetworkAccessManager(this);
 
   // 1. First request to get the salt
@@ -66,7 +66,7 @@ void BWNetworkService::login(QString password)
   QJsonObject obj;
   obj["email"] = m_email;
   QJsonDocument doc(obj);
-  QNetworkReply* reply1 = mgr->post(request1, doc.toJson());
+  QNetworkReply* reply1 = mgr->post(request1, doc.toJson(QJsonDocument::JsonFormat::Compact));
   QObject::connect(reply1, &QNetworkReply::finished, [=](){
     if (reply1->error() == QNetworkReply::NoError) {
       // 1b. Parse result and use it to derivate key
@@ -198,7 +198,6 @@ void BWNetworkService::editEntry(BWDatabaseEntry* entry)
 {
   QNetworkAccessManager *mgr = new QNetworkAccessManager(this);
   const QUrl url(m_server + QString("/api/ciphers/%1").arg(entry->id));
-  qDebug() << url;
   QNetworkRequest request(url);
   request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
   request.setRawHeader("bitwarden-client-name", BW_CL_NAME);
@@ -219,10 +218,11 @@ void BWNetworkService::editEntry(BWDatabaseEntry* entry)
     qCritical() << "Unsupported entry type! " << entry->type;
   }
   QJsonDocument doc(obj);
-  QNetworkReply* reply = mgr->put(request, doc.toJson());
+  QNetworkReply* reply = mgr->put(request, doc.toJson(QJsonDocument::JsonFormat::Compact));
   QObject::connect(reply, &QNetworkReply::finished, [=](){
     QJsonDocument resp = QJsonDocument::fromJson(reply->readAll());
     qDebug() << "Edit entry: " << reply->error() << " " << resp;
+    // TODO: Notify the UI of the result
   });
 }
 
@@ -271,12 +271,14 @@ void EncryptedString::setClear(QString str)
 
   if (m_type == EncryptionType::Unknown) {
     // This is the first time this string is being encrypted.
-    // Arbitrarily choose the encryption type, and initialize an IV
+    // Arbitrarily choose the encryption type
     m_type = EncryptionType::AesCbc256_HmacSha256_B64;
-    auto gen = QRandomGenerator();
-    m_iv.resize(16);
-    gen.generate(m_iv.begin(), m_iv.end());
   }
+
+  // In any case, generate a new IV
+  auto gen = QRandomGenerator();
+  m_iv.resize(16);
+  gen.generate(m_iv.begin(), m_iv.end());
 
   switch (m_type) {
   case EncryptionType::AesCbc256_HmacSha256_B64:
@@ -314,7 +316,7 @@ QString EncryptedString::toString()
 
   switch (m_type) {
   case EncryptionType::AesCbc256_HmacSha256_B64:
-    return QString("%1.%2|%3|%4").arg(m_type).arg(m_iv.toBase64()).arg(m_data.toBase64()).arg(m_iv.toBase64());
+    return QString("%1.%2|%3|%4").arg(m_type).arg(m_iv.toBase64()).arg(m_data.toBase64()).arg(m_mac.toBase64());
   default:
     qCritical() << "Unsupported cipher for formatting: " << m_type;
     return "";
