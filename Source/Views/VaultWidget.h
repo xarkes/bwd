@@ -17,7 +17,6 @@ private:
   QWidget* m_midPane = nullptr;
   QWidget* m_rightPane = nullptr;
   QLineEdit* m_searchBar = nullptr;
-  QString m_filter;
 
   QIcon m_iconHide;
   QIcon m_iconGlobe;
@@ -37,8 +36,8 @@ private:
   void onEntryClicked(size_t idx=-1);
 
   QIcon& getIconForEntry(BWDatabaseEntry*);
+  void filter(const QString& text, QString folder="");
 
 private slots:
   void onSynced();
-  void filter(const QString& text);
 };

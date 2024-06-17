@@ -13,10 +13,10 @@ BWCategory::BWCategory(QString text, QWidget* parent) : QWidget(parent)
   const auto defaultHeight = 500;
   const auto collapsedHeight = 50;
 
-  auto cl = new QVBoxLayout();
-  m_contentArea->setLayout(cl);
+  m_contentArea->setLayout(new QVBoxLayout());
+  m_contentArea->layout()->setContentsMargins(0, 0, 0, 0);
+  m_contentArea->layout()->setAlignment(Qt::AlignTop);
   m_contentArea->setMaximumHeight(contentHeight);
-  cl->addWidget(new BWCategoryEntry("inner item"));
 
   auto animThis = new QPropertyAnimation(this, "maximumHeight");
   animThis->setDuration(300);
@@ -25,14 +25,14 @@ BWCategory::BWCategory(QString text, QWidget* parent) : QWidget(parent)
   m_toggleAnimation.addAnimation(animThis);
   auto animContent = new QPropertyAnimation(m_contentArea, "maximumHeight");
   animContent->setDuration(300);
-  animContent->setStartValue(cl->sizeHint().height());
+  animContent->setStartValue(m_contentArea->layout()->sizeHint().height());
   animContent->setEndValue(0);
   m_toggleAnimation.addAnimation(animContent);
 
-  m_layout.addWidget(m_toggleButton);
-  m_layout.addWidget(m_contentArea);
-  m_layout.setContentsMargins(0, 0, 0, 0);
-  setLayout(&m_layout);
+  setLayout(new QVBoxLayout());
+  layout()->addWidget(m_toggleButton);
+  layout()->addWidget(m_contentArea);
+  layout()->setContentsMargins(0, 0, 0, 0);
 
   QObject::connect(m_toggleButton, &QPushButton::clicked, [this](const bool checked) {
     m_toggleAnimation.setDirection(checked ? QAbstractAnimation::Direction::Backward : QAbstractAnimation::Direction::Forward);

@@ -48,10 +48,16 @@ struct BWDatabaseEntry {
   QString folderId;
 };
 
+struct BWDatabaseFolder {
+  QString id;
+  EncryptedString name;
+};
+
 struct BWDatabase {
   BWDatabase() {};
-  BWDatabase(QJsonArray& ciphers);
+  BWDatabase(QJsonArray& ciphers, QJsonArray& folders);
   QList<BWDatabaseEntry> entries;
+  QList<BWDatabaseFolder> folders;
 };
 
 

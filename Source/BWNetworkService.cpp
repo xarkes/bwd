@@ -12,6 +12,7 @@
 #include <QPasswordDigestor>
 #include <QMessageAuthenticationCode>
 #include <QRandomGenerator>
+#include <qjsonarray.h>
 #include <qjsonvalue.h>
 
 #include "ThirdParty/aes.h"
@@ -187,7 +188,8 @@ void BWNetworkService::sync()
     QJsonDocument response = QJsonDocument::fromJson(contents, &error);
 
     QJsonArray ciphers = response["Ciphers"].toArray();
-    m_database = BWDatabase(ciphers);
+    QJsonArray folders = response["Folders"].toArray();
+    m_database = BWDatabase(ciphers, folders);
     emit synced();
   });
 }
@@ -398,9 +400,8 @@ QByteArray EncryptedString::decryptToBytes(QByteArray key, QByteArray mac)
   return m_decrypted;
 }
 
-BWDatabase::BWDatabase(QJsonArray& ciphers)
+BWDatabase::BWDatabase(QJsonArray& ciphers, QJsonArray& folders)
 {
-  qDebug() << ciphers;
   for (QJsonValueRef cipher : ciphers) {
     QJsonObject obj = cipher.toObject();
     QJsonObject data = obj["Data"].toObject();
@@ -415,5 +416,13 @@ BWDatabase::BWDatabase(QJsonArray& ciphers)
       obj["FolderId"].toString()
     };
     entries.push_back(entry);
+  }
+  for (QJsonValueRef folder : folders) {
+    QJsonObject fObj = folder.toObject();
+    BWDatabaseFolder dbFolder{
+      fObj["Id"].toString(),
+      EncryptedString(fObj["Name"].toString())
+    };
+    this->folders.push_back(dbFolder);
   }
 }

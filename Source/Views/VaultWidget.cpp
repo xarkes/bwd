@@ -18,6 +18,7 @@ VaultWidget::VaultWidget()
   QWidget* topbar = new QWidget();
   topbar->setLayout(new QHBoxLayout());
   topbar->setStyleSheet("background-color: blue;");
+  topbar->setMaximumHeight(50);
 
   m_searchBar = new QLineEdit();
   m_searchBar->setPlaceholderText("Search vault");
@@ -54,7 +55,9 @@ VaultWidget::VaultWidget()
 
   /* Handlers */
   connect(Net(), &BWNetworkService::synced, this, &VaultWidget::onSynced);
-  connect(m_searchBar, &QLineEdit::textChanged, this, &VaultWidget::filter);
+  connect(m_searchBar, &QLineEdit::textChanged, this, [this](QString text) {
+    filter(text);
+  });
 }
 
 void VaultWidget::updateLeftPane()
@@ -73,13 +76,41 @@ void VaultWidget::updateLeftPane()
     // XXX: Does this leak memory?
     // XXX: shouldnt we call deleteLater
   }
+
+  // Highlighted items
+  auto row = new QWidget();
+  row->setLayout(new QVBoxLayout());
+  row->layout()->setAlignment(Qt::AlignTop);
+  row->layout()->setSizeConstraint(QBoxLayout::SizeConstraint::SetMinimumSize);
   auto lpgroup = new QButtonGroup(ll);
-  for (auto s : { "All items", "Favorites", "Whatever" }) {
-    auto w = new BWCategoryEntry(s);
-    ll->addWidget(w);
+  auto w = new BWCategoryEntry("All items");
+  row->layout()->addWidget(w);
+  lpgroup->addButton(w);
+  connect(w, &QPushButton::released, [this](){
+    filter("");
+  });
+  ll->addWidget(row);
+
+  // Folders
+  // TODO: Use BWCategory instead and support folding?
+  row = new QWidget();
+  row->setLayout(new QVBoxLayout());
+  row->layout()->setAlignment(Qt::AlignTop);
+  for (auto& f : Net()->db().folders) {
+    auto w = new BWCategoryEntry(f.name.decrypt());
+    row->layout()->addWidget(w);
     lpgroup->addButton(w);
+    connect(w, &QPushButton::released, [this, f]() {
+      filter("", f.id);
+    });
   }
-  ll->addWidget(new BWCategory("Test"));
+  w = new BWCategoryEntry("No folder");
+  row->layout()->addWidget(w);
+  lpgroup->addButton(w);
+  connect(w, &QPushButton::released, [this]() {
+    filter("", "None");
+  });
+  ll->addWidget(row);
 }
 
 void VaultWidget::updateMidPane()
@@ -277,14 +308,19 @@ void VaultWidget::onSynced()
   updateRightPane();
 }
 
-void VaultWidget::filter(const QString& text)
+void VaultWidget::filter(const QString& text, QString folder)
 {
-  m_filter = text.toLower();
   m_shownEntries.clear();
   for (auto& entry : Net()->db().entries) {
     QString name = entry.name.decrypt();
     QString uri = entry.uri.decrypt();
-    if (m_filter.length() && !(name.toLower().contains(m_filter) || uri.toLower().contains(m_filter))) {
+    QString username = entry.username.decrypt();
+
+    // If text, use it for filtering on every folder
+    // Otherwise just show the selected folder
+    if (text.length() && !(name.toLower().contains(text) || uri.toLower().contains(text) || username.toLower().contains(text))) {
+      continue;
+    } else if ((folder.length() && entry.folderId != folder) || folder == "None" && entry.folderId != "") {
       continue;
     }
     m_shownEntries.append(&entry);
