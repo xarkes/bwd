@@ -58,6 +58,17 @@ VaultWidget::VaultWidget()
   connect(m_searchBar, &QLineEdit::textChanged, this, [this](QString text) {
     filter(text);
   });
+  connect(m_searchBar, &QLineEdit::returnPressed, this, [this]() {
+    auto item = m_midPane->layout()->itemAt(0);
+    if (item) {
+      auto w = dynamic_cast<BWEntry*>(item->widget());
+      if (w) {
+        w->toggle();
+        w->setFocus();
+        onEntryClicked(0);
+      }
+    }
+  });
 }
 
 void VaultWidget::updateLeftPane()
@@ -320,7 +331,7 @@ void VaultWidget::filter(const QString& text, QString folder)
     // Otherwise just show the selected folder
     if (text.length() && !(name.toLower().contains(text) || uri.toLower().contains(text) || username.toLower().contains(text))) {
       continue;
-    } else if ((folder.length() && entry.folderId != folder) || folder == "None" && entry.folderId != "") {
+    } else if ((folder.length() && entry.folderId != folder) || (folder == "None" && entry.folderId != "")) {
       continue;
     }
     m_shownEntries.append(&entry);
