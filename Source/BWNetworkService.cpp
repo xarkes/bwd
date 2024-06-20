@@ -15,6 +15,7 @@
 #include <qjsonarray.h>
 #include <qjsondocument.h>
 #include <qjsonvalue.h>
+#include <QThreadPool>
 
 #include "ThirdParty/aes.h"
 
@@ -22,18 +23,12 @@ static const char* BW_CL_NAME = "desktop_bwd";
 
 BWNetworkService::BWNetworkService()
 {
-}
-
-void BWNetworkService::preLogin(QString email, QString server)
-{
-  // TODO: Do input validation eg. we want to make sure that server is a valid URL etc.
-  m_email = email;
-  m_server = server;
-  emit preLoginDone(true);
+  m_reqmgr = new QNetworkAccessManager(this);
+  connect(this, &BWNetworkService::loginPasswordDerived, this, &BWNetworkService::doLogin);
 }
 
 static QByteArray hkdfExpandSha256(QByteArray prk, QByteArray info, size_t outputByteSize) {
-  const size_t hashLen = 32;
+  const double hashLen = 32.0;
   Q_ASSERT(outputByteSize <= 255 * hashLen);
   Q_ASSERT(prk.length() >= hashLen);
   const int n = ceil(outputByteSize / hashLen);
@@ -53,122 +48,138 @@ static QByteArray hkdfExpandSha256(QByteArray prk, QByteArray info, size_t outpu
   return okm.sliced(0, outputByteSize);
 }
 
-void BWNetworkService::login(QString password)
+void BWNetworkService::preLogin(const QString& email, const QString& server)
 {
-  QNetworkAccessManager *mgr = new QNetworkAccessManager(this);
+  m_email = email;
+  m_server = server;
 
-  // 1. First request to get the salt
-  const QUrl url1(m_server + "/identity/accounts/prelogin");
-  QNetworkRequest request1(url1);
-  request1.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-  request1.setRawHeader("bitwarden-client-name", BW_CL_NAME);
-  request1.setRawHeader("Accept", "application/json");
+  // Initiate first request to verify distant server is reachable
+  // and get the salt for key derivation
+  const QUrl url(m_server + "/identity/accounts/prelogin");
+  QNetworkRequest request(url);
+  request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+  request.setRawHeader("bitwarden-client-name", BW_CL_NAME);
+  request.setRawHeader("Accept", "application/json");
   QJsonObject obj;
   obj["email"] = m_email;
   QJsonDocument doc(obj);
-  QNetworkReply* reply1 = mgr->post(request1, doc.toJson(QJsonDocument::JsonFormat::Compact));
-  QObject::connect(reply1, &QNetworkReply::finished, [=](){
-    if (reply1->error() == QNetworkReply::NoError) {
-      // 1b. Parse result and use it to derivate key
-      QJsonDocument resp = QJsonDocument::fromJson(reply1->readAll());
-      if (!resp.isObject()) {
-        emit Net()->loginDone(false);
-        return;
-      }
-      QJsonObject respo = resp.object();
-      if (!respo.contains("Kdf") || !respo.contains("KdfIterations")) {
-        emit Net()->loginDone(false);
-        return;
-      }
-      auto kdf = respo["Kdf"].toInt();
-      auto kdfiterations = respo["KdfIterations"].toInt();
-      if (kdf != 0) {
-        // TODO: Support argon2id
-        qCritical() << "argon2id not supported!";
-        emit Net()->loginDone(false);
-        return;
-      }
-      m_masterKey = QPasswordDigestor::deriveKeyPbkdf2(QCryptographicHash::Sha256, password.toUtf8(), m_email.toUtf8(), kdfiterations, 32);
+  m_reply = m_reqmgr->post(request, doc.toJson(QJsonDocument::JsonFormat::Compact));
+  QObject::connect(m_reply, &QNetworkReply::finished, this, &BWNetworkService::preLoginReceived);
+}
 
-      // 2. Second request to unlock
-      const QUrl url(m_server + "/identity/connect/token");
-      QNetworkRequest request(url);
-      request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded; charset=utf-8");
-      request.setRawHeader("bitwarden-client-name", BW_CL_NAME);
-      request.setRawHeader("Accept", "application/json");
-  
-      const int iterations = 1;
-      QByteArray passwordHash = QPasswordDigestor::deriveKeyPbkdf2(QCryptographicHash::Sha256, m_masterKey, password.toUtf8(), iterations, 32);
-      QByteArray localHash = QPasswordDigestor::deriveKeyPbkdf2(QCryptographicHash::Sha256, m_masterKey, password.toUtf8(), iterations + 1, 32);
+void BWNetworkService::preLoginReceived()
+{
+  if (m_reply->error() != QNetworkReply::NoError) {
+    emit preLoginDone(false);
+    return;
+  }
 
-      QString deviceIdentifier = "5756df8d-22c9-4da8-bab3-d27f8af38e91"; // XXX
-      QString deviceName = "chrome"; // XXX
+  QJsonDocument resp = QJsonDocument::fromJson(m_reply->readAll());
+  if (!resp.isObject()) {
+    emit preLoginDone(false);
+    return;
+  }
+  QJsonObject respo = resp.object();
+  if (!respo.contains("Kdf") || !respo.contains("KdfIterations")) {
+    emit preLoginDone(false);
+    return;
+  }
+  auto kdf = respo["Kdf"].toInt();
+  if (kdf != 0) {
+    // TODO: Support argon2id
+    qCritical() << "argon2id not supported!";
+    emit preLoginDone(false);
+    return;
+  }
 
-      QString content = "scope=api%20offline_access&client_id=web&deviceType=9&deviceIdentifier=" + deviceIdentifier + "&deviceName=" + deviceName + "&grant_type=password&username=" + QUrl::toPercentEncoding(m_email) + "&password=" + QUrl::toPercentEncoding(passwordHash.toBase64());
+  m_kdfiterations = respo["KdfIterations"].toInt();
+  emit preLoginDone(true);
+}
 
-      QNetworkReply *reply = mgr->post(request, content.toUtf8());
-      QObject::connect(reply, &QNetworkReply::finished, [=](){
-        QByteArray contents = reply->readAll();
-        QJsonParseError error;
-        QJsonDocument response = QJsonDocument::fromJson(contents, &error);
-
-        QString message;
-        QString object;
-
-        if (response.isObject()) {
-          auto obj = response.object();
-          if (obj.contains("ErrorModel")) {
-            auto model = obj.value("ErrorModel");
-            if (model.isObject()) {
-              obj = model.toObject();
-              message = obj.value("Message").toString();
-              object = obj.value("Object").toString();
-            }
-          }
-        }
-
-        bool isError = (object == "Error" || reply->error() != QNetworkReply::NoError);
-        if (isError) {
-          if (!message.isEmpty()) {
-            qDebug() << object << ": " << message;
-          } else {
-            qDebug() << contents;
-          }
-          emit Net()->loginDone(false);
-        } else {
-          if (response["token_type"].toString() != "Bearer") {
-            emit Net()->loginDone(false);
-          } else {
-            m_accessToken = response["access_token"].toString().toUtf8();
-
-            // Decrypt user key
-            auto encrypted_key = EncryptedString(response["Key"].toString().toUtf8());
-            if (encrypted_key.m_type != EncryptionType::AesCbc256_HmacSha256_B64) {
-              qCritical() << "Unsupported algorithm!";
-              return;
-            }
-
-            QByteArray stretchedKey = hkdfExpandSha256(m_masterKey, "enc", 32);
-            QByteArray macKey = hkdfExpandSha256(m_masterKey, "mac", 32);
-            m_key = encrypted_key.decryptToBytes(stretchedKey, macKey);
-
-            // TODO: Maybe required for other encryption schemes
-            // encrypted_key = EncryptedString(response["PrivateKey"].toString().toUtf8());
-            // m_privateKey = encrypted_key.decryptToBytes(stretchedKey, stretchedKey.sliced(32));
-
-            // Done, go forward
-            emit Net()->loginDone(true);
-            sync();
-          }
-        }
-        reply->deleteLater();
-      });
-
-    } else {
-      emit Net()->loginDone(false);
-    }
-    reply1->deleteLater();
+void BWNetworkService::login(const QString& password)
+{
+  QThreadPool::globalInstance()->start([this, password](){
+    m_masterKey = QPasswordDigestor::deriveKeyPbkdf2(QCryptographicHash::Sha256, password.toUtf8(), m_email.toUtf8(), m_kdfiterations, 32);
+    const int iterations = 1;
+    m_passwordHash = QPasswordDigestor::deriveKeyPbkdf2(QCryptographicHash::Sha256, m_masterKey, password.toUtf8(), iterations, 32);
+    m_localHash = QPasswordDigestor::deriveKeyPbkdf2(QCryptographicHash::Sha256, m_masterKey, password.toUtf8(), iterations + 1, 32);
+    emit loginPasswordDerived();
   });
+}
+
+void BWNetworkService::doLogin()
+{
+  const QUrl url(m_server + "/identity/connect/token");
+  QNetworkRequest request(url);
+  request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded; charset=utf-8");
+  request.setRawHeader("bitwarden-client-name", BW_CL_NAME);
+  request.setRawHeader("Accept", "application/json");
+
+  QString deviceIdentifier = "5756df8d-22c9-4da8-bab3-d27f8af38e91"; // XXX
+  QString deviceName = "chrome"; // XXX
+
+  QString content = "scope=api%20offline_access&client_id=web&deviceType=9&deviceIdentifier=" + deviceIdentifier + "&deviceName=" + deviceName + "&grant_type=password&username=" + QUrl::toPercentEncoding(m_email) + "&password=" + QUrl::toPercentEncoding(m_passwordHash.toBase64());
+
+  m_reply->deleteLater();
+  m_reply = m_reqmgr->post(request, content.toUtf8());
+  QObject::connect(m_reply, &QNetworkReply::finished, this, &BWNetworkService::loginReceived);
+}
+
+void BWNetworkService::loginReceived()
+{
+  QByteArray contents = m_reply->readAll();
+  QJsonParseError error;
+  QJsonDocument response = QJsonDocument::fromJson(contents, &error);
+
+  QString message;
+  QString object;
+
+  if (response.isObject()) {
+    auto obj = response.object();
+    if (obj.contains("ErrorModel")) {
+      auto model = obj.value("ErrorModel");
+      if (model.isObject()) {
+        obj = model.toObject();
+        message = obj.value("Message").toString();
+        object = obj.value("Object").toString();
+      }
+    }
+  }
+
+  bool isError = (object == "Error" || m_reply->error() != QNetworkReply::NoError);
+  if (isError) {
+    if (!message.isEmpty()) {
+      qDebug() << object << ": " << message;
+    } else {
+      qDebug() << contents;
+    }
+    emit Net()->loginDone(false);
+  } else {
+    if (response["token_type"].toString() != "Bearer") {
+      emit Net()->loginDone(false);
+    } else {
+      m_accessToken = response["access_token"].toString().toUtf8();
+
+      // Decrypt user key
+      auto encrypted_key = EncryptedString(response["Key"].toString().toUtf8());
+      if (encrypted_key.m_type != EncryptionType::AesCbc256_HmacSha256_B64) {
+        qCritical() << "Unsupported algorithm!";
+        return;
+      }
+
+      QByteArray stretchedKey = hkdfExpandSha256(m_masterKey, "enc", 32);
+      QByteArray macKey = hkdfExpandSha256(m_masterKey, "mac", 32);
+      m_key = encrypted_key.decryptToBytes(stretchedKey, macKey);
+
+      // TODO: Maybe required for other encryption schemes
+      // encrypted_key = EncryptedString(response["PrivateKey"].toString().toUtf8());
+      // m_privateKey = encrypted_key.decryptToBytes(stretchedKey, stretchedKey.sliced(32));
+
+      // Done, go forward
+      emit Net()->loginDone(true);
+      sync();
+    }
+  }
 }
 
 void BWNetworkService::sync()

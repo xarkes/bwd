@@ -3,6 +3,9 @@
 #include <QObject>
 #include <QWidget>
 
+class QNetworkAccessManager;
+class QNetworkReply;
+
 class BWNetworkService;
 static BWNetworkService* __net_instance = nullptr;
 
@@ -72,8 +75,8 @@ public:
     return __net_instance;
   }
 
-  void preLogin(QString email, QString server);
-  void login(QString password);
+  void preLogin(const QString& email, const QString& server);
+  void login(const QString& password);
   void sync();
   void editEntry(BWDatabaseEntry* entry);
 
@@ -84,11 +87,17 @@ public:
 
 signals:
   void preLoginDone(bool success);
+  void loginPasswordDerived();
   void loginDone(bool success);
   void synced();
 
 protected:
   void run();
+
+private slots:
+  void preLoginReceived();
+  void doLogin();
+  void loginReceived();
 
 private:
   BWNetworkService();
@@ -98,5 +107,12 @@ private:
   QByteArray m_masterKey;
   QByteArray m_accessToken;
   BWDatabase m_database;
+  int m_kdfiterations;
+
+  QByteArray m_passwordHash;
+  QByteArray m_localHash;
+
+  QNetworkAccessManager* m_reqmgr;
+  QNetworkReply* m_reply;
 };
 

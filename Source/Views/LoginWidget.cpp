@@ -11,7 +11,6 @@
 
 LoginWidget::LoginWidget()
 {
-
   m_inputEmail = new BWLineEdit("Email address", this);
   m_inputServer = new BWLineEdit("Server", this);
   m_buttonLogin = new QPushButton("Continue", this);
@@ -58,7 +57,6 @@ LoginWidget::LoginWidget()
   });
   connect(Net(), &BWNetworkService::preLoginDone, [this](bool success){
     setLoadingScreen(false);
-    qDebug() << "prelogin " << success;
     if (success) {
       emit loginOk();
       Net()->sync();
