@@ -7,6 +7,7 @@
 #include "VaultUnlockWidget.h"
 #include "BWNetworkService.h"
 #include <Components/BWLineEdit.h>
+#include <Components/BWBusyIndicator.h>
 
 VaultUnlockWidget::VaultUnlockWidget()
 {
@@ -22,6 +23,9 @@ VaultUnlockWidget::VaultUnlockWidget()
   m_buttonUnlock = new QPushButton("Unlock", this);
   m_buttonUnlock->setStyleSheet("color: blue; background-color: white;");
 
+  m_busyIndicator = new BWBusyIndicator();
+  m_busyIndicator->setVisible(false);
+
   auto layout = new QVBoxLayout();
   layout->setContentsMargins(50, 50, 50, 200);
   layout->setSizeConstraint(QLayout::SizeConstraint::SetFixedSize);
@@ -29,6 +33,7 @@ VaultUnlockWidget::VaultUnlockWidget()
   layout->addWidget(m_inputPassword);
   layout->addWidget(m_buttonBack);
   layout->addWidget(m_buttonUnlock);
+  layout->addWidget(m_busyIndicator);
 
   QWidget* topbar = new QWidget();
   topbar->setStyleSheet("background-color: blue;");
@@ -38,15 +43,15 @@ VaultUnlockWidget::VaultUnlockWidget()
   mainLayout->setContentsMargins(0, 0, 0, 0);
   mainLayout->addWidget(topbar);
   mainLayout->addLayout(layout);
-
-  connect(m_buttonUnlock, &QPushButton::released, [this](){
+  
+  connect(m_buttonUnlock, &QPushButton::released, [this]() {
     Net()->login(m_inputPassword->text());
     setLoading(true);
   });
-  connect(m_buttonBack, &QPushButton::released, [this](){
+  connect(m_buttonBack, &QPushButton::released, [this]() {
     emit back();
   });
-  connect(Net(), &BWNetworkService::loginDone, [this](bool success){
+  connect(Net(), &BWNetworkService::loginDone, [this](bool success) {
     setLoading(false);
     if (success) {
       emit unlocked();
@@ -58,4 +63,5 @@ VaultUnlockWidget::VaultUnlockWidget()
 void VaultUnlockWidget::setLoading(bool loading)
 {
   m_inputPassword->setDisabled(loading);
+  m_busyIndicator->setVisible(loading);
 }

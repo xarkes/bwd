@@ -23,6 +23,7 @@ qt_add_executable(bwd
     Source/Components/BWField.cpp
     Source/Components/BWLineEdit.cpp
     Source/Components/BWListWidget.cpp
+    Source/Components/BWBusyIndicator.cpp
 
     Source/ThirdParty/aes.cc
 )
