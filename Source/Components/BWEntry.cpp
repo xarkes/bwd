@@ -3,12 +3,27 @@
 
 #include "BWEntry.h"
 
-BWEntry::BWEntry(QString label, QString note, QWidget* parent) : QPushButton(parent), m_label(label), m_note(note) {
+static const QString loadingText = "Loading...";
+
+BWEntry::BWEntry(QString label, QString note, QWidget* parent) : QPushButton(parent), m_label(label), m_note(note)
+{
   setMouseTracking(true);
   setFont(QFont("Open Sans", 10, QFont::Weight::Normal));
   setContentsMargins(10, 10, 0, 0);
   setMinimumSize(QSize(label.length() * font().pointSize(), font().pointSize()*3.5 + contentsMargins().top() + contentsMargins().bottom()));
   setCheckable(true);
+}
+
+BWEntry::BWEntry(EncryptedString& label, EncryptedString& note, QWidget* parent) : BWEntry(loadingText, loadingText, parent)
+{
+  label.decryptAsync().then([this](QString value){
+    m_label = value;
+    // update();
+  });
+  note.decryptAsync().then([this](QString value){
+    m_note = value;
+    // update();
+  });
 }
 
 void BWEntry::mouseMoveEvent(QMouseEvent *e) {
@@ -27,6 +42,7 @@ void BWEntry::mouseMoveEvent(QMouseEvent *e) {
 
 void BWEntry::leaveEvent(QEvent *e)
 {
+  Q_UNUSED(e);
   // if (rect().contains(mapFromGlobal(QCursor::pos())))
   m_over = false;
   update();

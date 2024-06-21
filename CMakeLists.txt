@@ -12,6 +12,7 @@ qt_add_executable(bwd
     Source/Main.cpp
     Source/MainWindow.cpp
     Source/BWNetworkService.cpp
+    Source/EncryptedString.cpp
 
     Source/Views/LoginWidget.cpp
     Source/Views/VaultUnlockWidget.cpp
@@ -40,6 +41,7 @@ qt_add_resources(bwd
         "Resources/Images/note.png"
 )
 
+set(CMAKE_CXX_FLAGS "-Wextra -Wall")
 target_link_libraries(bwd PRIVATE Qt6::Widgets Qt6::Network)
 target_include_directories(bwd PRIVATE Source)
 

@@ -2,6 +2,7 @@
 
 #include "BWNetworkService.h"
 #include <QWidget>
+#include <QScrollArea>
 
 class QPushButton;
 class QLineEdit;
@@ -13,8 +14,8 @@ public:
   VaultWidget();
 
 private:
-  QWidget* m_leftPane = nullptr;
-  QWidget* m_midPane = nullptr;
+  QScrollArea* m_leftPane = nullptr;
+  QScrollArea* m_midPane = nullptr;
   QWidget* m_rightPane = nullptr;
   QLineEdit* m_searchBar = nullptr;
 
@@ -30,10 +31,10 @@ private:
 
   void updateLeftPane();
   void updateMidPane();
-  void updateRightPane(size_t idx=-1, bool edit=false);
-  void showRightPane(size_t idx=-1);
-  void showRightPaneEdit(size_t idx=-1);
-  void onEntryClicked(size_t idx=-1);
+  void updateRightPane(qsizetype idx=-1, bool edit=false);
+  void showRightPane(qsizetype idx=-1);
+  void showRightPaneEdit(qsizetype idx=-1);
+  void onEntryClicked(qsizetype idx=-1);
 
   QIcon& getIconForEntry(BWDatabaseEntry*);
   void filter(const QString& text, QString folder="");

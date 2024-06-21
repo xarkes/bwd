@@ -74,13 +74,16 @@ VaultWidget::VaultWidget()
 void VaultWidget::updateLeftPane()
 {
   if (!m_leftPane) {
-    m_leftPane = new QWidget();
+    m_leftPane = new QScrollArea();
     m_leftPane->setStyleSheet("background-color: rgb(32, 47, 63)");
     m_leftPane->setMinimumWidth(200);
     m_leftPane->setMaximumWidth(300);
-    m_leftPane->setLayout(new QVBoxLayout());
+    auto w = new QWidget();
+    w->setLayout(new QVBoxLayout());
+    m_leftPane->setWidget(w);
+    m_leftPane->setWidgetResizable(true);
   }
-  auto ll = m_leftPane->layout();
+  auto ll = m_leftPane->widget()->layout();
   while (ll->count()) {
     auto w = ll->takeAt(0);
     w->widget()->setParent(nullptr);
@@ -127,13 +130,16 @@ void VaultWidget::updateLeftPane()
 void VaultWidget::updateMidPane()
 {
   if (!m_midPane) {
-    m_midPane = new QWidget();
+    m_midPane = new QScrollArea();
     m_midPane->setStyleSheet("background-color: white;");
     m_midPane->setMinimumWidth(200);
     m_midPane->setMaximumWidth(300);
-    m_midPane->setLayout(new QVBoxLayout());
+    auto w = new QWidget();
+    w->setLayout(new QVBoxLayout());
+    m_midPane->setWidget(w);
+    m_midPane->setWidgetResizable(true);
   }
-  auto mp = m_midPane->layout();
+  auto mp = m_midPane->widget()->layout();
   while (mp->count()) {
     auto w = mp->takeAt(0);
     w->widget()->setParent(nullptr);
@@ -148,10 +154,7 @@ void VaultWidget::updateMidPane()
   auto mpgroup = new QButtonGroup(mp);
   mpgroup->setExclusive(true);
   for (auto entry : m_shownEntries) {
-    QString name = entry->name.decrypt();
-    QString uri = entry->uri.decrypt();
-    QString subtext = entry->username.decrypt();
-    auto w = new BWEntry(name, subtext);
+    auto w = new BWEntry(entry->name, entry->username);
     w->setIcon(getIconForEntry(entry));
     connect(w, &QPushButton::released, this, [this, idx]{ onEntryClicked(idx); });
     mp->addWidget(w);
@@ -160,7 +163,7 @@ void VaultWidget::updateMidPane()
   }
 }
 
-void VaultWidget::updateRightPane(size_t idx, bool edit)
+void VaultWidget::updateRightPane(qsizetype idx, bool edit)
 {
   if (!m_rightPane) {
     m_rightPane = new QWidget();
@@ -181,7 +184,7 @@ void VaultWidget::updateRightPane(size_t idx, bool edit)
   }
 }
 
-void VaultWidget::showRightPaneEdit(size_t idx) {
+void VaultWidget::showRightPaneEdit(qsizetype idx) {
   auto title = new BWLineEdit("title");
   auto username = new BWLineEdit("username");
   auto password = new BWLineEdit("password");
@@ -222,7 +225,7 @@ void VaultWidget::showRightPaneEdit(size_t idx) {
   m_rightPane->layout()->addWidget(uri);
 }
 
-void VaultWidget::showRightPane(size_t idx) {
+void VaultWidget::showRightPane(qsizetype idx) {
   BWDatabaseEntry* entry = nullptr;
   if (idx != -1 && idx < m_shownEntries.length()) {
     entry = m_shownEntries[idx];
@@ -303,7 +306,7 @@ void VaultWidget::showRightPane(size_t idx) {
   }
 }
 
-void VaultWidget::onEntryClicked(size_t idx)
+void VaultWidget::onEntryClicked(qsizetype idx)
 {
   updateRightPane(idx);
 }

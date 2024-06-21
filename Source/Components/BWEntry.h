@@ -2,6 +2,7 @@
 
 #include <QPushButton>
 #include "BWStyle.h"
+#include "EncryptedString.h"
 
 class BWEntry : public QPushButton
 {
@@ -9,6 +10,7 @@ class BWEntry : public QPushButton
 
 public:
   BWEntry(QString label, QString note="", QWidget* parent=nullptr);
+  BWEntry(EncryptedString& label, EncryptedString& note, QWidget* parent=nullptr);
   void paintEvent(QPaintEvent* event) override;
   void mouseMoveEvent(QMouseEvent* event) override;
   void leaveEvent(QEvent* event) override;
