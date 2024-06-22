@@ -3,7 +3,7 @@
 
 #include "BWCategoryEntry.h"
 
-BWCategoryEntry::BWCategoryEntry(QString label, QString note, QWidget* parent) : QPushButton(parent), m_label(label) {
+BWCategoryEntry::BWCategoryEntry(QString label, QWidget* parent) : QPushButton(parent), m_label(label) {
   setMouseTracking(true);
   setFont(QFont("Open Sans", 10, QFont::Weight::Normal));
   setContentsMargins(5, 5, 5, 5);
@@ -27,6 +27,7 @@ void BWCategoryEntry::mouseMoveEvent(QMouseEvent *e) {
 
 void BWCategoryEntry::leaveEvent(QEvent *e)
 {
+  Q_UNUSED(e);
   // if (rect().contains(mapFromGlobal(QCursor::pos())))
   m_over = false;
   update();
@@ -45,7 +46,6 @@ void BWCategoryEntry::paintEvent(QPaintEvent* event)
 {
   QPainter p(this);
 
-  const int focusBarWidth = 5;
   const bool paintBg = isChecked() || m_over;
 
   // Background

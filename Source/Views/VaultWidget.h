@@ -6,7 +6,7 @@
 
 class QPushButton;
 class QLineEdit;
-class BWDatabaseEntry;
+struct BWDatabaseEntry;
 
 class VaultWidget : public QWidget {
   Q_OBJECT;

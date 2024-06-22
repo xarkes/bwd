@@ -1,11 +1,9 @@
 #include "BWCategory.h"
 #include <QPropertyAnimation>
-#include <qpropertyanimation.h>
-
 
 BWCategory::BWCategory(QString text, QWidget* parent) : QWidget(parent)
 {
-  m_toggleButton = new BWCategoryEntry(text, "", this);
+  m_toggleButton = new BWCategoryEntry(text, this);
   m_toggleButton->setChecked(true);
   m_contentArea = new QScrollArea(this);
 

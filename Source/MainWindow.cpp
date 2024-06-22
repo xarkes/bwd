@@ -23,9 +23,6 @@ void MainWindow::showLogin()
     });
     centralWidget()->layout()->addWidget(m_loginView);
   }
-  if (m_loginView->parent()) {
-    auto p = m_loginView->parentWidget();
-  }
   static_cast<QStackedLayout*>(centralWidget()->layout())->setCurrentWidget(m_loginView);
 }
 

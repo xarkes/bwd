@@ -8,7 +8,7 @@ class BWCategoryEntry : public QPushButton
   Q_OBJECT;
 
 public:
-  BWCategoryEntry(QString label, QString note="", QWidget* parent=nullptr);
+  BWCategoryEntry(QString label, QWidget* parent=nullptr);
   void paintEvent(QPaintEvent* event) override;
   void mouseMoveEvent(QMouseEvent* event) override;
   void leaveEvent(QEvent* event) override;

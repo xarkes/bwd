@@ -11,9 +11,6 @@
 #include <QNetworkReply>
 #include <QPasswordDigestor>
 #include <QMessageAuthenticationCode>
-#include <qjsonarray.h>
-#include <qjsondocument.h>
-#include <qjsonvalue.h>
 #include <QThreadPool>
 
 static const char* BW_CL_NAME = "desktop_bwd";
