@@ -58,11 +58,18 @@ public:
   QByteArray m_key; // TODO
   QByteArray m_privateKey;
 
+  enum NotificationLevel {
+    Info = 0,
+    Success = 1,
+    Error = 2
+  };
+
 signals:
   void preLoginDone(bool success);
   void loginPasswordDerived();
   void loginDone(bool success);
   void synced();
+  void notify(QString text, NotificationLevel level);
 
 protected:
   void run();

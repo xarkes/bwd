@@ -64,24 +64,27 @@ void BWNetworkService::preLogin(const QString& email, const QString& server)
 void BWNetworkService::preLoginReceived()
 {
   if (m_reply->error() != QNetworkReply::NoError) {
+    emit notify("Network error: " + m_reply->errorString(), NotificationLevel::Error);
     emit preLoginDone(false);
     return;
   }
 
   QJsonDocument resp = QJsonDocument::fromJson(m_reply->readAll());
   if (!resp.isObject()) {
+    emit notify("Unexpected answer from server.", NotificationLevel::Error);
     emit preLoginDone(false);
     return;
   }
   QJsonObject respo = resp.object();
   if (!respo.contains("Kdf") || !respo.contains("KdfIterations")) {
+    emit notify("Unexpected answer from server: no Kdf nor KdfIterations settings found.", NotificationLevel::Error);
     emit preLoginDone(false);
     return;
   }
   auto kdf = respo["Kdf"].toInt();
   if (kdf != 0) {
     // TODO: Support argon2id
-    qCritical() << "argon2id not supported!";
+    emit notify("Argon2id key derivation is not yet supported.", NotificationLevel::Error);
     emit preLoginDone(false);
     return;
   }
@@ -143,9 +146,9 @@ void BWNetworkService::loginReceived()
   bool isError = (object == "Error" || m_reply->error() != QNetworkReply::NoError);
   if (isError) {
     if (!message.isEmpty()) {
-      qDebug() << object << ": " << message;
+      emit notify(message, NotificationLevel::Error);
     } else {
-      qDebug() << contents;
+      emit notify("Got empty answer from server.", NotificationLevel::Error);
     }
     emit Net()->loginDone(false);
   } else {
@@ -157,7 +160,7 @@ void BWNetworkService::loginReceived()
       // Decrypt user key
       auto encrypted_key = EncryptedString(response["Key"].toString().toUtf8());
       if (encrypted_key.m_type != EncryptionType::AesCbc256_HmacSha256_B64) {
-        qCritical() << "Unsupported algorithm!";
+        emit notify(QString("Unsupported algorithm: %1").arg(encrypted_key.m_type), NotificationLevel::Error);
         return;
       }
 
