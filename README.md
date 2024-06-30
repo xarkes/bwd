@@ -10,6 +10,7 @@ More information [here](https://xarkes.com/b/bitwarden-code-review.html).
 >   - The code is not mature **at all**
 >   - The code is not tested
 >   - All features are not implemented
+> 
 > Using it on a real database could lead to database corruption.
 
 ![Bwd screenshot](./Resources/screenshot.jpg)
