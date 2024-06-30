@@ -48,7 +48,7 @@ void BWNetworkService::preLogin(const QString& email, const QString& server)
   m_server = server;
 
   // Initiate first request to verify distant server is reachable
-  // and get the salt for key derivation
+  // Also retrieves Kdf parameters
   const QUrl url(m_server + "/identity/accounts/prelogin");
   QNetworkRequest request(url);
   request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
@@ -82,11 +82,14 @@ void BWNetworkService::preLoginReceived()
     return;
   }
   auto kdf = respo["Kdf"].toInt();
-  if (kdf != 0) {
+  if (kdf == 1) {
     // TODO: Support argon2id
     emit notify("Argon2id key derivation is not yet supported.", NotificationLevel::Error);
     emit preLoginDone(false);
     return;
+  } else if (kdf != 0) {
+    emit notify("Unrecognized key derivation method.", NotificationLevel::Error);
+    emit preLoginDone(false);
   }
 
   m_kdfiterations = respo["KdfIterations"].toInt();
@@ -95,11 +98,14 @@ void BWNetworkService::preLoginReceived()
 
 void BWNetworkService::login(const QString& password)
 {
+  // Compute the derived password in a separate thread in order to avoid
+  // blocking the UI (main thread)
   QThreadPool::globalInstance()->start([this, password](){
     m_masterKey = QPasswordDigestor::deriveKeyPbkdf2(QCryptographicHash::Sha256, password.toUtf8(), m_email.toUtf8(), m_kdfiterations, 32);
     const int iterations = 1;
     m_passwordHash = QPasswordDigestor::deriveKeyPbkdf2(QCryptographicHash::Sha256, m_masterKey, password.toUtf8(), iterations, 32);
     m_localHash = QPasswordDigestor::deriveKeyPbkdf2(QCryptographicHash::Sha256, m_masterKey, password.toUtf8(), iterations + 1, 32);
+    // Go to doLogin()
     emit loginPasswordDerived();
   });
 }
@@ -117,7 +123,6 @@ void BWNetworkService::doLogin()
 
   QString content = "scope=api%20offline_access&client_id=web&deviceType=9&deviceIdentifier=" + deviceIdentifier + "&deviceName=" + deviceName + "&grant_type=password&username=" + QUrl::toPercentEncoding(m_email) + "&password=" + QUrl::toPercentEncoding(m_passwordHash.toBase64());
 
-  m_reply->deleteLater();
   m_reply = m_reqmgr->post(request, content.toUtf8());
   QObject::connect(m_reply, &QNetworkReply::finished, this, &BWNetworkService::loginReceived);
 }
@@ -142,7 +147,6 @@ void BWNetworkService::loginReceived()
       }
     }
   }
-
   bool isError = (object == "Error" || m_reply->error() != QNetworkReply::NoError);
   if (isError) {
     if (!message.isEmpty()) {
@@ -229,7 +233,6 @@ void BWNetworkService::editEntry(BWDatabaseEntry* entry)
   QNetworkReply* reply = mgr->put(request, doc.toJson(QJsonDocument::JsonFormat::Compact));
   QObject::connect(reply, &QNetworkReply::finished, [=](){
     QJsonDocument resp = QJsonDocument::fromJson(reply->readAll());
-    qDebug() << "Edit entry: " << reply->error() << " " << resp;
     // TODO: Notify the UI of the result
   });
 }

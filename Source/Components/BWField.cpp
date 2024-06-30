@@ -7,7 +7,7 @@
 
 #include "BWField.h"
 
-BWField::BWField(QString title, QWidget* parent) : m_title(title), QLabel(parent)
+BWField::BWField(QString title, QWidget* parent) : QLabel(parent), m_title(title) 
 {
   setMinimumHeight(font().pointSize() * 4);
   setAlignment(Qt::AlignmentFlag::AlignBottom);
@@ -15,6 +15,7 @@ BWField::BWField(QString title, QWidget* parent) : m_title(title), QLabel(parent
 
 void BWField::paintEvent(QPaintEvent* event)
 {
+  Q_UNUSED(event);
   auto p = QPainter(this);
   p.setPen(QColorConstants::Blue);
   p.drawText(QPoint(0, font().pointSize()), m_title);
@@ -34,6 +35,7 @@ void BWFieldConfidential::toggle()
 
 void BWFieldConfidential::paintEvent(QPaintEvent* event)
 {
+  Q_UNUSED(event);
   auto p = QPainter(this);
   p.setPen(QColorConstants::Blue);
   p.drawText(QPoint(0, font().pointSize()), m_title);

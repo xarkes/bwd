@@ -9,7 +9,6 @@ class QNetworkAccessManager;
 class QNetworkReply;
 
 class BWNetworkService;
-static BWNetworkService* __net_instance = nullptr;
 
 #define Net() BWNetworkService::instance()
 
@@ -42,10 +41,8 @@ class BWNetworkService : public QWidget {
 
 public:
   static BWNetworkService* instance() {
-    if (!__net_instance) {
-      __net_instance = new BWNetworkService();
-    }
-    return __net_instance;
+    static BWNetworkService instance;
+    return &instance;
   }
 
   void preLogin(const QString& email, const QString& server);
